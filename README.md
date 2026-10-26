@@ -33,6 +33,27 @@ Every clip uses a different one of the [example databases](examples/README.md) t
 | **Metabolomics: splashing.** Write a value into a consolidated cell and it spreads down to the cells below. | ![fluxoterm: splashing a value into bile acid concentrations](docs/media/fluxoterm-metabolomics-splash.gif) |
 | **OnlineRetail: pivot.** Pick the dimensions for rows and columns, then swap them with `s`. | ![fluxoterm: pivoting a cube](docs/media/fluxoterm-pivot.gif) |
 
+## Quick start (Docker)
+
+The image is public on GitHub's container registry, no login needed. It contains the server, fluxoterm, fluxoscope and the example databases, which it imports at startup.
+
+```bash
+docker run -p 7777:7777 ghcr.io/vherolf/fluxolap
+```
+
+Then open <http://localhost:7777/ui/> for fluxoscope or <http://localhost:7777/api/v1/docs> for the API docs. `Ctrl+C` stops it.
+
+- **Tags.** `latest` (the default) is the newest release; every release also has its version tag, e.g. `ghcr.io/vherolf/fluxolap:v1.0.0`. `latest` changes only when you `docker pull` again. For a server that keeps data, pin a version tag, so a pull doesn't bring a new major version unnoticed.
+- **Another port.** `-p 7778:7777` serves it on <http://localhost:7778/> (the second number is the port inside the container).
+- **Keep your data.** Without a data folder everything is in memory and gone when the container stops:
+  ```bash
+  docker run -p 7777:7777 -e FLUXOLAP_DATA_DIR=/data -v "$HOME/fluxolap-data:/data" ghcr.io/vherolf/fluxolap:v1.0.0
+  ```
+  It saves on a normal stop (`Ctrl+C`, `docker stop`), not on `docker kill`.
+- **In the background.** `docker run -d --name fluxolap -p 7777:7777 ghcr.io/vherolf/fluxolap`, then `docker logs fluxolap`, and `docker stop fluxolap` to stop it.
+- **Without the examples.** Add `-e FLUXOLAP_EXAMPLES=`.
+- **fluxoterm.** `docker exec -it fluxolap fluxoterm` runs the terminal client inside a container named `fluxolap`.
+
 ## Quick start (release download)
 
 A release tarball contains `fluxolap` (the server), `fluxoterm` (the terminal viewer/editor), `ui/` (fluxoscope, the web app), `fluxolap.oxt` (the LibreOffice Calc extension), `examples/` (eight example databases), `start.sh` and this README.
@@ -60,27 +81,6 @@ Then open <http://localhost:7777/ui/> in a browser for fluxoscope.
 - **Stop.** `Ctrl+C` in the server's terminal, or `kill <pid>` (SIGTERM). Either one saves to `FLUXOLAP_DATA_DIR` first. `kill -9` stops without saving.
 - **fluxoterm.** Starts in read-only VIEW mode; `i` switches to EDIT and `Esc` back. `:q` quits and `?` lists every key. `fluxoterm http://host:7777` connects to another server; for a remote one, tunnel over SSH: `ssh -N -L 17777:localhost:7777 user@host`, then `fluxoterm http://localhost:17777`.
 - **No login.** The server has no authentication and listens on all network interfaces, so don't expose port 7777 beyond networks you trust.
-
-## Quick start (Docker)
-
-The image is public on GitHub's container registry, no login needed. It contains the server, fluxoterm, fluxoscope and the example databases, which it imports at startup.
-
-```bash
-docker run -p 7777:7777 ghcr.io/vherolf/fluxolap
-```
-
-Then open <http://localhost:7777/ui/> for fluxoscope or <http://localhost:7777/api/v1/docs> for the API docs. `Ctrl+C` stops it.
-
-- **Tags.** `latest` (the default) is the newest release; every release also has its version tag, e.g. `ghcr.io/vherolf/fluxolap:v1.0.0`. `latest` changes only when you `docker pull` again. For a server that keeps data, pin a version tag, so a pull doesn't bring a new major version unnoticed.
-- **Another port.** `-p 7778:7777` serves it on <http://localhost:7778/> (the second number is the port inside the container).
-- **Keep your data.** Without a data folder everything is in memory and gone when the container stops:
-  ```bash
-  docker run -p 7777:7777 -e FLUXOLAP_DATA_DIR=/data -v "$HOME/fluxolap-data:/data" ghcr.io/vherolf/fluxolap:v1.0.0
-  ```
-  It saves on a normal stop (`Ctrl+C`, `docker stop`), not on `docker kill`.
-- **In the background.** `docker run -d --name fluxolap -p 7777:7777 ghcr.io/vherolf/fluxolap`, then `docker logs fluxolap`, and `docker stop fluxolap` to stop it.
-- **Without the examples.** Add `-e FLUXOLAP_EXAMPLES=`.
-- **fluxoterm.** `docker exec -it fluxolap fluxoterm` runs the terminal client inside a container named `fluxolap`.
 
 ## Try it with example data
 
