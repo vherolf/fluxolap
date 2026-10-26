@@ -1,4 +1,4 @@
-# fluxolap: every dimension
+# fluxolap : every dimension
 
 An OLAP engine in Rust that turns numbers into cubes you can slice, drill into and splash: databases, dimensions, element hierarchies with weighted consolidation, cubes, cell read/write with splashing, locks/rollback, and per-database persistence, served through a batch-first REST/JSON API. See [PLAN.md](PLAN.md) for the design and testing strategy.
 
