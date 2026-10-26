@@ -60,11 +60,18 @@ A release tarball contains `fluxolap` (the server), `fluxoterm` (the terminal vi
 
 Download the latest release from the [releases page](https://github.com/vherolf/fluxolap/releases/latest), or on the command line. These links always point at the newest release:
 
+**Linux (x86_64)**
+
 ```bash
 mkdir fluxolap && cd fluxolap
-# Linux (x86_64)
 curl -L https://github.com/vherolf/fluxolap/releases/latest/download/fluxolap-x86_64-unknown-linux-gnu.tar.gz | tar xz
-# macOS (Apple silicon)
+./start.sh                     # the server with the examples; prints how to connect
+```
+
+**macOS (Apple silicon)**
+
+```bash
+mkdir fluxolap && cd fluxolap
 curl -L https://github.com/vherolf/fluxolap/releases/latest/download/fluxolap-aarch64-apple-darwin.tar.gz | tar xz
 ./start.sh                     # the server with the examples; prints how to connect
 ```
