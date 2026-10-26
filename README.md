@@ -10,10 +10,6 @@ Three partners ship together:
 
 And for spreadsheets, **fluxolap for LibreOffice Calc**: an extension with cube formulas like `=FLUX.DATA(…)` (see [below](#fluxolap-for-libreoffice-calc)).
 
-![fluxoscope: a pivot table with a heatmap over the OnlineRetail example, drilled into 2010 and Continental Europe](docs/media/fluxoscope-pivot.png)
-
-![fluxoterm: the same cube in the terminal](docs/media/fluxoterm-pivot.png)
-
 ### See it work
 
 Every clip uses a different one of the [example databases](examples/README.md) that come with fluxolap.
