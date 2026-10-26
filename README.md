@@ -10,6 +10,22 @@ Three partners ship together:
 
 And for spreadsheets, **fluxolap for LibreOffice Calc**: an extension with cube formulas like `=FLUX.DATA(…)` (see [below](#fluxolap-for-libreoffice-calc)).
 
+![fluxoscope: a pivot table with a heatmap over the OnlineRetail example, drilled into 2010 and Continental Europe](docs/media/fluxoscope-pivot.png)
+
+![fluxoterm: the same cube in the terminal](docs/media/fluxoterm-pivot.png)
+
+### See it work
+
+The clips use the example databases that come with fluxolap.
+
+| | |
+|---|---|
+| **fluxoscope: drill down.** Open years into quarters and regions into countries, and turn on the heatmap. | ![fluxoscope drill-down with heatmap](docs/media/fluxoscope-drill.gif) |
+| **fluxoscope: charts.** The same view as a line, bar or stacked chart. | ![fluxoscope charts](docs/media/fluxoscope-charts.gif) |
+| **fluxoterm: drill down.** Open rows with `Space` and columns with `x`. | ![fluxoterm drill-down](docs/media/fluxoterm-drill.gif) |
+| **fluxoterm: pivot.** Pick the dimensions for rows and columns, then swap them with `s`. | ![fluxoterm pivot](docs/media/fluxoterm-pivot.gif) |
+| **fluxoterm: splashing.** Write to a consolidated cell and the value spreads down to its base cells. | ![fluxoterm splash](docs/media/fluxoterm-splash.gif) |
+
 ## Quick start (release download)
 
 A release tarball contains `fluxolap` (the server), `fluxoterm` (the terminal viewer/editor), `ui/` (fluxoscope, the web app), `fluxolap.oxt` (the LibreOffice Calc extension), `examples/` (eight example databases), `start.sh` and this README.
