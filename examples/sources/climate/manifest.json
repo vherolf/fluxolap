@@ -1,0 +1,74 @@
+{
+  "database": "Climate",
+  "order": 4,
+  "description": "CO2 emissions by country and source since 1850, and monthly CO2 concentration and global temperature anomaly.",
+  "sources": [
+    {
+      "name": "Global Carbon Budget (via Our World in Data CO2 dataset)",
+      "by": "Global Carbon Project; Our World in Data",
+      "url": "https://github.com/owid/co2-data",
+      "license": "CC BY 4.0"
+    },
+    {
+      "name": "Continents according to Our World in Data",
+      "by": "Our World in Data",
+      "url": "https://ourworldindata.org/grapher/continents-according-to-our-world-in-data",
+      "license": "CC BY 4.0"
+    },
+    {
+      "name": "Mauna Loa CO2 monthly mean",
+      "by": "NOAA Global Monitoring Laboratory (Lan, Tans, Thoning)",
+      "url": "https://gml.noaa.gov/ccgg/trends/",
+      "license": "Free public use, citation requested"
+    },
+    {
+      "name": "GISS Surface Temperature Analysis (GISTEMP) v4",
+      "by": "GISTEMP Team, NASA Goddard Institute for Space Studies",
+      "url": "https://data.giss.nasa.gov/gistemp/",
+      "license": "Free use, citation requested"
+    }
+  ],
+  "dimensions": [
+    {
+      "name": "Country",
+      "file": "dim_country.csv.gz"
+    },
+    {
+      "name": "Year",
+      "file": "dim_year.csv.gz"
+    },
+    {
+      "name": "Source",
+      "file": "dim_source.csv.gz"
+    },
+    {
+      "name": "Month",
+      "file": "dim_month.csv.gz"
+    },
+    {
+      "name": "Measure",
+      "file": "dim_measure.csv.gz"
+    }
+  ],
+  "cubes": [
+    {
+      "name": "Emissions",
+      "dimensions": [
+        "Country",
+        "Year",
+        "Source"
+      ],
+      "file": "cube_emissions.csv.gz"
+    },
+    {
+      "name": "Atmosphere",
+      "dimensions": [
+        "Year",
+        "Month",
+        "Measure"
+      ],
+      "file": "cube_atmosphere.csv.gz"
+    }
+  ],
+  "attributes": []
+}

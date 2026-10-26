@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Write-back: every new or opened document runs the job; it attaches to spreadsheets. -->
+<oor:component-data xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" oor:name="Jobs" oor:package="org.openoffice.Office">
+  <node oor:name="Jobs">
+    <node oor:name="org.fluxolap.calc.WriteBackJob" oor:op="replace">
+      <prop oor:name="Service"><value>org.fluxolap.calc.WriteBackJob</value></prop>
+    </node>
+  </node>
+  <node oor:name="Events">
+    <!-- A document view was created: a new or opened document, on screen or
+         hidden (OnNew/OnLoad only come for visible ones). Attaching twice is
+         harmless: write-back attaches once per document. -->
+    <node oor:name="OnViewCreated" oor:op="fuse">
+      <node oor:name="JobList">
+        <node oor:name="org.fluxolap.calc.WriteBackJob" oor:op="replace"/>
+      </node>
+    </node>
+  </node>
+</oor:component-data>

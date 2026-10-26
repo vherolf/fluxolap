@@ -1,0 +1,50 @@
+{
+  "database": "OnlineRetail",
+  "order": 1,
+  "description": "Monthly sales of a UK online gift retailer, Dec 2009 - Dec 2011, by country and product.",
+  "sources": [
+    {
+      "name": "Online Retail II",
+      "by": "Daqing Chen",
+      "url": "https://doi.org/10.24432/C5CG6D",
+      "license": "CC BY 4.0"
+    }
+  ],
+  "dimensions": [
+    {
+      "name": "Month",
+      "file": "dim_month.csv.gz"
+    },
+    {
+      "name": "Country",
+      "file": "dim_country.csv.gz"
+    },
+    {
+      "name": "Product",
+      "file": "dim_product.csv.gz"
+    },
+    {
+      "name": "Measure",
+      "file": "dim_measure.csv.gz"
+    }
+  ],
+  "cubes": [
+    {
+      "name": "Sales",
+      "dimensions": [
+        "Month",
+        "Country",
+        "Product",
+        "Measure"
+      ],
+      "file": "cube_sales.csv.gz"
+    }
+  ],
+  "attributes": [
+    {
+      "dimension": "Product",
+      "attribute": "Description",
+      "file": "attr_product_description.csv.gz"
+    }
+  ]
+}

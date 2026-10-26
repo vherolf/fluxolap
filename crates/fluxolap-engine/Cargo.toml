@@ -1,0 +1,15 @@
+[package]
+name = "fluxolap-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+tokio.workspace = true
+serde.workspace = true
+bincode.workspace = true
+rayon.workspace = true
+zstd.workspace = true
+fluxolap-domain = { path = "../fluxolap-domain" }
+fluxolap-storage = { path = "../fluxolap-storage" }
+fluxolap-error = { path = "../fluxolap-error" }

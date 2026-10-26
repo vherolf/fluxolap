@@ -1,0 +1,17 @@
+[package]
+name = "fluxolap-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "fluxolap"
+path = "src/main.rs"
+
+[dependencies]
+axum.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+fluxolap-engine = { path = "../fluxolap-engine" }
+fluxolap-api = { path = "../fluxolap-api" }

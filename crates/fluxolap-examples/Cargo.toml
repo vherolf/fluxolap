@@ -1,0 +1,14 @@
+[package]
+name = "fluxolap-examples"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+csv = "1"
+flate2 = "1"
+fluxolap-domain = { path = "../fluxolap-domain" }
+fluxolap-storage = { path = "../fluxolap-storage" }
+fluxolap-engine = { path = "../fluxolap-engine" }

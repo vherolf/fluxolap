@@ -1,0 +1,16 @@
+[package]
+name = "fluxolap-api-types"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+# Constructors from the engine's own types, for the server. Clients (like
+# fluxoterm) leave it off and so don't depend on the engine crates.
+convert = ["dep:fluxolap-domain", "dep:fluxolap-storage"]
+
+[dependencies]
+serde.workspace = true
+utoipa.workspace = true
+fluxolap-domain = { path = "../fluxolap-domain", optional = true }
+fluxolap-storage = { path = "../fluxolap-storage", optional = true }

@@ -1,0 +1,19 @@
+[package]
+name = "fluxolap-storage"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fluxolap-domain = { path = "../fluxolap-domain" }
+serde.workspace = true
+rayon.workspace = true
+smallvec.workspace = true
+# `cold.rs` needs this in production code for `ElementId`'s
+# `Key`/`KeyData` trait/type (`.data().as_ffi()`/`KeyData::from_ffi()`),
+# not just in tests -- moved out of dev-dependencies below.
+slotmap.workspace = true
+
+[dev-dependencies]
+bincode.workspace = true
+proptest.workspace = true

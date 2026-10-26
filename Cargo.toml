@@ -1,0 +1,59 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/fluxolap-domain",
+    "crates/fluxolap-storage",
+    "crates/fluxolap-error",
+    "crates/fluxolap-engine",
+    "crates/fluxolap-api-types",
+    "crates/fluxolap-api",
+    "crates/fluxolap-examples",
+    "crates/fluxolap-server",
+    "crates/fluxoterm",
+    "crates/fluxoscope",
+    "xtask",
+]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.7", features = ["macros"] }
+tower-http = { version = "0.6", features = ["cors", "fs"] }
+serde_json = "1"
+utoipa = "5"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+slotmap = { version = "1", features = ["serde"] }
+bincode = "1"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+proptest = "1"
+rayon = "1"
+zstd = "0.13"
+smallvec = { version = "1", features = ["serde", "union"] }
+
+# Neither LTO nor a single codegen unit was ever configured, so every
+# release build (this workspace's own `cargo build --release -p
+# fluxolap-server`, and an embedding application's separate `cargo build
+# --release` against these same crates as path dependencies) ran with
+# Cargo's bare defaults (no LTO, codegen-units=16) -- free perf left on
+# the table, especially relevant here since the hot cell-scan/aggregation
+# path crosses fluxolap-engine/fluxolap-storage/fluxolap-domain crate
+# boundaries that won't inline across without LTO. "thin" over "fat": most
+# of the benefit, a much smaller build-time cost.
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+# fluxoscope's WebAssembly release build
+# (`trunk build --release --cargo-profile wasm-release`):
+# optimized for download size, with full LTO.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"
+lto = true

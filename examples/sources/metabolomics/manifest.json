@@ -1,0 +1,39 @@
+{
+  "database": "Metabolomics",
+  "order": 8,
+  "description": "Bile acids in the blood of 20 people with Parkinson's disease and 20 healthy people (MetaboLights MTBLS15429), in ng/mL.",
+  "sources": [
+    {
+      "name": "Targeted Bile Acid Metabolomic Profiling of Plasma Samples in Patients with Parkinson's Disease",
+      "by": "Zhe Zhao et al., Peking University Third Hospital; MetaboLights",
+      "url": "https://www.ebi.ac.uk/metabolights/MTBLS15429",
+      "license": "CC0 1.0"
+    }
+  ],
+  "dimensions": [
+    {
+      "name": "Bile acid",
+      "file": "dim_bile_acid.csv.gz"
+    },
+    {
+      "name": "Participant",
+      "file": "dim_participant.csv.gz"
+    },
+    {
+      "name": "Measure",
+      "file": "dim_measure.csv.gz"
+    }
+  ],
+  "cubes": [
+    {
+      "name": "Bile acids",
+      "dimensions": [
+        "Bile acid",
+        "Participant",
+        "Measure"
+      ],
+      "file": "cube_bile_acids.csv.gz"
+    }
+  ],
+  "attributes": []
+}

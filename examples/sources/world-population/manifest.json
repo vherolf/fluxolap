@@ -1,0 +1,44 @@
+{
+  "database": "WorldPopulation",
+  "order": 3,
+  "description": "Population of every country by sex and 5-year age group, 1950-2100 (UN estimates and medium-variant projections).",
+  "sources": [
+    {
+      "name": "World Population Prospects 2024",
+      "by": "United Nations, DESA, Population Division",
+      "url": "https://population.un.org/wpp/",
+      "license": "CC BY 3.0 IGO"
+    }
+  ],
+  "dimensions": [
+    {
+      "name": "Location",
+      "file": "dim_location.csv.gz"
+    },
+    {
+      "name": "Year",
+      "file": "dim_year.csv.gz"
+    },
+    {
+      "name": "Sex",
+      "file": "dim_sex.csv.gz"
+    },
+    {
+      "name": "Age",
+      "file": "dim_age.csv.gz"
+    }
+  ],
+  "cubes": [
+    {
+      "name": "Population",
+      "dimensions": [
+        "Location",
+        "Year",
+        "Sex",
+        "Age"
+      ],
+      "file": "cube_population.csv.gz"
+    }
+  ],
+  "attributes": []
+}

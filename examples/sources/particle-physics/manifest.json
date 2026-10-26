@@ -1,0 +1,50 @@
+{
+  "database": "ParticlePhysics",
+  "order": 6,
+  "description": "100,000 LHC collisions with two muons, recorded by CMS at CERN in 2010: count them by mass and the J/psi, Upsilon and Z particles appear.",
+  "sources": [
+    {
+      "name": "Dimuon event information derived from the Run2010B public Mu dataset",
+      "by": "CMS Collaboration (Thomas McCauley), CERN Open Data Portal",
+      "url": "https://opendata.cern.ch/record/700",
+      "doi": "10.7483/OPENDATA.CMS.CB8H.MFFA",
+      "license": "CC0"
+    }
+  ],
+  "dimensions": [
+    {
+      "name": "Mass",
+      "file": "dim_mass.csv.gz"
+    },
+    {
+      "name": "Charge",
+      "file": "dim_charge.csv.gz"
+    },
+    {
+      "name": "Muon types",
+      "file": "dim_muon_types.csv.gz"
+    },
+    {
+      "name": "Detector region",
+      "file": "dim_detector_region.csv.gz"
+    },
+    {
+      "name": "Run",
+      "file": "dim_run.csv.gz"
+    }
+  ],
+  "cubes": [
+    {
+      "name": "Events",
+      "dimensions": [
+        "Mass",
+        "Charge",
+        "Muon types",
+        "Detector region",
+        "Run"
+      ],
+      "file": "cube_events.csv.gz"
+    }
+  ],
+  "attributes": []
+}

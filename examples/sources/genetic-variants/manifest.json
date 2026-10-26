@@ -1,0 +1,54 @@
+{
+  "database": "GeneticVariants",
+  "order": 7,
+  "description": "4.6 million human genetic variants from ClinVar (NCBI) by gene, type, clinical classification, review status and year evaluated.",
+  "sources": [
+    {
+      "name": "ClinVar variant_summary (GRCh38)",
+      "by": "National Center for Biotechnology Information, U.S. National Library of Medicine",
+      "url": "https://www.ncbi.nlm.nih.gov/clinvar/",
+      "license": "No restrictions on use or distribution (NCBI); attribution requested: Landrum et al. 2018, PMID 29165669"
+    }
+  ],
+  "dimensions": [
+    {
+      "name": "Gene",
+      "file": "dim_gene.csv.gz"
+    },
+    {
+      "name": "Variant type",
+      "file": "dim_variant_type.csv.gz"
+    },
+    {
+      "name": "Classification",
+      "file": "dim_classification.csv.gz"
+    },
+    {
+      "name": "Review status",
+      "file": "dim_review_status.csv.gz"
+    },
+    {
+      "name": "Last evaluated",
+      "file": "dim_last_evaluated.csv.gz"
+    },
+    {
+      "name": "Measure",
+      "file": "dim_measure.csv.gz"
+    }
+  ],
+  "cubes": [
+    {
+      "name": "Variants",
+      "dimensions": [
+        "Gene",
+        "Variant type",
+        "Classification",
+        "Review status",
+        "Last evaluated",
+        "Measure"
+      ],
+      "file": "cube_variants.csv.gz"
+    }
+  ],
+  "attributes": []
+}

@@ -1,0 +1,10 @@
+[build]
+target = "index.html"
+# Relative asset paths: the same build works at a site's root and under
+# fluxolap's /ui/.
+public_url = "./"
+
+# `trunk serve` forwards the API to a fluxolap on this machine, so the app
+# talks to its own origin and no CORS setup is needed while developing.
+[[proxy]]
+backend = "http://localhost:7777/api/"

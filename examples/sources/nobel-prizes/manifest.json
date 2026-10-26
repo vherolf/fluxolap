@@ -1,0 +1,49 @@
+{
+  "database": "NobelPrizes",
+  "order": 2,
+  "description": "Every Nobel Prize and laureate since 1901, by category, year, birth country and gender.",
+  "sources": [
+    {
+      "name": "Nobel Prize API v2.1",
+      "by": "Nobel Prize Outreach",
+      "url": "https://api.nobelprize.org/",
+      "license": "CC0"
+    }
+  ],
+  "dimensions": [
+    {
+      "name": "Category",
+      "file": "dim_category.csv.gz"
+    },
+    {
+      "name": "Year",
+      "file": "dim_year.csv.gz"
+    },
+    {
+      "name": "Birth country",
+      "file": "dim_birth_country.csv.gz"
+    },
+    {
+      "name": "Gender",
+      "file": "dim_gender.csv.gz"
+    },
+    {
+      "name": "Measure",
+      "file": "dim_measure.csv.gz"
+    }
+  ],
+  "cubes": [
+    {
+      "name": "Laureates",
+      "dimensions": [
+        "Category",
+        "Year",
+        "Birth country",
+        "Gender",
+        "Measure"
+      ],
+      "file": "cube_laureates.csv.gz"
+    }
+  ],
+  "attributes": []
+}

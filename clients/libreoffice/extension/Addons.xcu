@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The fluxolap menu in Calc; each item calls the Commands service (fluxolap_addin.py). -->
+<oor:component-data xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" oor:name="Addons" oor:package="org.openoffice.Office">
+  <node oor:name="AddonUI">
+    <node oor:name="OfficeMenuBar">
+      <node oor:name="org.fluxolap.calc.menu" oor:op="replace">
+        <prop oor:name="Title" oor:type="xs:string"><value xml:lang="en-US">f~luxolap</value></prop>
+        <prop oor:name="Context" oor:type="xs:string"><value>com.sun.star.sheet.SpreadsheetDocument</value></prop>
+        <node oor:name="Submenu">
+          <node oor:name="m0" oor:op="replace">
+            <prop oor:name="URL" oor:type="xs:string"><value>service:org.fluxolap.calc.Commands?paste</value></prop>
+            <prop oor:name="Title" oor:type="xs:string"><value xml:lang="en-US">~Paste view…</value></prop>
+            <prop oor:name="Target" oor:type="xs:string"><value>_self</value></prop>
+            <prop oor:name="Context" oor:type="xs:string"><value>com.sun.star.sheet.SpreadsheetDocument</value></prop>
+          </node>
+          <node oor:name="m1" oor:op="replace">
+            <prop oor:name="URL" oor:type="xs:string"><value>service:org.fluxolap.calc.Commands?refresh</value></prop>
+            <prop oor:name="Title" oor:type="xs:string"><value xml:lang="en-US">~Refresh values</value></prop>
+            <prop oor:name="Target" oor:type="xs:string"><value>_self</value></prop>
+            <prop oor:name="Context" oor:type="xs:string"><value>com.sun.star.sheet.SpreadsheetDocument</value></prop>
+          </node>
+          <node oor:name="m2" oor:op="replace">
+            <prop oor:name="URL" oor:type="xs:string"><value>private:separator</value></prop>
+          </node>
+          <node oor:name="m3" oor:op="replace">
+            <prop oor:name="URL" oor:type="xs:string"><value>service:org.fluxolap.calc.Commands?connect</value></prop>
+            <prop oor:name="Title" oor:type="xs:string"><value xml:lang="en-US">~Connect…</value></prop>
+            <prop oor:name="Target" oor:type="xs:string"><value>_self</value></prop>
+            <prop oor:name="Context" oor:type="xs:string"><value>com.sun.star.sheet.SpreadsheetDocument</value></prop>
+          </node>
+          <node oor:name="m4" oor:op="replace">
+            <prop oor:name="URL" oor:type="xs:string"><value>service:org.fluxolap.calc.Commands?load</value></prop>
+            <prop oor:name="Title" oor:type="xs:string"><value xml:lang="en-US">~Load database…</value></prop>
+            <prop oor:name="Target" oor:type="xs:string"><value>_self</value></prop>
+            <prop oor:name="Context" oor:type="xs:string"><value>com.sun.star.sheet.SpreadsheetDocument</value></prop>
+          </node>
+        </node>
+      </node>
+    </node>
+  </node>
+</oor:component-data>

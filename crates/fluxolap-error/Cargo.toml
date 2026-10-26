@@ -1,0 +1,9 @@
+[package]
+name = "fluxolap-error"
+description = "fluxolap's error model: the error codes and FluxolapError"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+thiserror.workspace = true

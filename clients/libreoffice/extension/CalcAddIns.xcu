@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Calc names and help texts of the fluxolap functions, in the order of idl/fluxolap.idl. -->
+<oor:component-data xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" oor:name="CalcAddIns" oor:package="org.openoffice.Office">
+  <node oor:name="AddInInfo">
+    <node oor:name="org.fluxolap.calc.FluxolapAddIn" oor:op="replace">
+      <node oor:name="AddInFunctions">
+        <node oor:name="data" oor:op="replace">
+          <prop oor:name="DisplayName"><value xml:lang="en">FLUX.DATA</value></prop>
+          <prop oor:name="Description"><value xml:lang="en">Reads one cell of a fluxolap cube. A consolidated element (a total) gives the total.</value></prop>
+          <prop oor:name="Category"><value>Add-In</value></prop>
+          <prop oor:name="CompatibilityName"><value xml:lang="en">FLUX.DATA</value></prop>
+          <node oor:name="Parameters">
+            <node oor:name="server" oor:op="replace">
+              <prop oor:name="DisplayName"><value xml:lang="en">Server</value></prop>
+              <prop oor:name="Description"><value xml:lang="en">The fluxolap server, e.g. localhost:7777</value></prop>
+            </node>
+            <node oor:name="database" oor:op="replace">
+              <prop oor:name="DisplayName"><value xml:lang="en">Database</value></prop>
+              <prop oor:name="Description"><value xml:lang="en">The database's name</value></prop>
+            </node>
+            <node oor:name="cube" oor:op="replace">
+              <prop oor:name="DisplayName"><value xml:lang="en">Cube</value></prop>
+              <prop oor:name="Description"><value xml:lang="en">The cube's name</value></prop>
+            </node>
+            <node oor:name="elements" oor:op="replace">
+              <prop oor:name="DisplayName"><value xml:lang="en">Elements</value></prop>
+              <prop oor:name="Description"><value xml:lang="en">One element name per cube dimension, in the cube's order</value></prop>
+            </node>
+          </node>
+        </node>
+        <node oor:name="area" oor:op="replace">
+          <prop oor:name="DisplayName"><value xml:lang="en">FLUX.AREA</value></prop>
+          <prop oor:name="Description"><value xml:lang="en">Reads a block of cells in one request (an array formula). Per cube dimension give one element or a range of them: the first with several elements becomes the rows, the second the columns.</value></prop>
+          <prop oor:name="Category"><value>Add-In</value></prop>
+          <prop oor:name="CompatibilityName"><value xml:lang="en">FLUX.AREA</value></prop>
+          <node oor:name="Parameters">
+            <node oor:name="server" oor:op="replace">
+              <prop oor:name="DisplayName"><value xml:lang="en">Server</value></prop>
+              <prop oor:name="Description"><value xml:lang="en">The fluxolap server, e.g. localhost:7777</value></prop>
+            </node>
+            <node oor:name="database" oor:op="replace">
+              <prop oor:name="DisplayName"><value xml:lang="en">Database</value></prop>
+              <prop oor:name="Description"><value xml:lang="en">The database's name</value></prop>
+            </node>
+            <node oor:name="cube" oor:op="replace">
+              <prop oor:name="DisplayName"><value xml:lang="en">Cube</value></prop>
+              <prop oor:name="Description"><value xml:lang="en">The cube's name</value></prop>
+            </node>
+            <node oor:name="elements" oor:op="replace">
+              <prop oor:name="DisplayName"><value xml:lang="en">Elements</value></prop>
+              <prop oor:name="Description"><value xml:lang="en">Per cube dimension, in the cube's order: an element name or a range of names</value></prop>
+            </node>
+          </node>
+        </node>
+        <node oor:name="elements" oor:op="replace">
+          <prop oor:name="DisplayName"><value xml:lang="en">FLUX.ELEMENTS</value></prop>
+          <prop oor:name="Description"><value xml:lang="en">Lists a dimension's elements as a column (an array formula): all of them in hierarchy order, or the children of one element.</value></prop>
+          <prop oor:name="Category"><value>Add-In</value></prop>
+          <prop oor:name="CompatibilityName"><value xml:lang="en">FLUX.ELEMENTS</value></prop>
+          <node oor:name="Parameters">
+            <node oor:name="server" oor:op="replace">
+              <prop oor:name="DisplayName"><value xml:lang="en">Server</value></prop>
+              <prop oor:name="Description"><value xml:lang="en">The fluxolap server, e.g. localhost:7777</value></prop>
+            </node>
+            <node oor:name="database" oor:op="replace">
+              <prop oor:name="DisplayName"><value xml:lang="en">Database</value></prop>
+              <prop oor:name="Description"><value xml:lang="en">The database's name</value></prop>
+            </node>
+            <node oor:name="dimension" oor:op="replace">
+              <prop oor:name="DisplayName"><value xml:lang="en">Dimension</value></prop>
+              <prop oor:name="Description"><value xml:lang="en">The dimension's name</value></prop>
+            </node>
+            <node oor:name="parent" oor:op="replace">
+              <prop oor:name="DisplayName"><value xml:lang="en">Parent</value></prop>
+              <prop oor:name="Description"><value xml:lang="en">Optional: list only this element's children</value></prop>
+            </node>
+          </node>
+        </node>
+        <node oor:name="server" oor:op="replace">
+          <prop oor:name="DisplayName"><value xml:lang="en">FLUX.SERVER</value></prop>
+          <prop oor:name="Description"><value xml:lang="en">The fluxolap server's name and version, or why it can't be reached.</value></prop>
+          <prop oor:name="Category"><value>Add-In</value></prop>
+          <prop oor:name="CompatibilityName"><value xml:lang="en">FLUX.SERVER</value></prop>
+          <node oor:name="Parameters">
+            <node oor:name="server" oor:op="replace">
+              <prop oor:name="DisplayName"><value xml:lang="en">Server</value></prop>
+              <prop oor:name="Description"><value xml:lang="en">The fluxolap server, e.g. localhost:7777</value></prop>
+            </node>
+          </node>
+        </node>
+      </node>
+    </node>
+  </node>
+</oor:component-data>

@@ -1,0 +1,15 @@
+[package]
+name = "xtask"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fluxolap-domain = { path = "../crates/fluxolap-domain" }
+fluxolap-storage = { path = "../crates/fluxolap-storage" }
+fluxolap-engine = { path = "../crates/fluxolap-engine" }
+fluxolap-examples = { path = "../crates/fluxolap-examples" }
+slotmap.workspace = true
+# The global allocator (see main.rs): keeps membench's memory numbers
+# free of glibc malloc holding on to freed memory.
+mimalloc = "0.1"

@@ -1,0 +1,31 @@
+// The spreadsheet functions of the fluxolap extension for LibreOffice Calc.
+// Compiled into fluxolap.rdb by build.py --idl (needs the LibreOffice SDK);
+// the .rdb is committed, so building the extension doesn't need the SDK.
+//
+// Calc names the functions in CalcAddIns.xcu (FLUX.DATA, ...). A trailing
+// `sequence<any>` parameter takes any number of arguments; an `any`
+// parameter may be left out.
+
+module org { module fluxolap { module calc {
+
+    interface XFluxolap : com::sun::star::uno::XInterface
+    {
+        // One cell: an element name per cube dimension, in order.
+        any data([in] string server, [in] string database, [in] string cube, [in] sequence<any> elements);
+
+        // A block of cells: per cube dimension one element or a range of
+        // them; the first dimension with several elements becomes the
+        // rows, the second the columns.
+        sequence< sequence< any > > area([in] string server, [in] string database, [in] string cube, [in] sequence<any> elements);
+
+        // A dimension's elements as a column: all of them, or the children
+        // of `parent`.
+        sequence< sequence< any > > elements([in] string server, [in] string database, [in] string dimension, [in] any parent);
+
+        // The server's name and version, or why it can't be reached.
+        string server([in] string server);
+    };
+
+    service FluxolapAddIn : XFluxolap;
+
+}; }; };

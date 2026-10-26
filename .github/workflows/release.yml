@@ -1,0 +1,166 @@
+name: Release
+
+# Only tags shaped like vX.Y.Z reach the workflow at all; the check-tag job
+# then gates the actual build/release on it being a major release (vX.0.0).
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  check-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      is_major: ${{ steps.check.outputs.is_major }}
+    steps:
+      - name: Check for major release tag (vX.0.0)
+        id: check
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [[ "$TAG" =~ ^v[0-9]+\.0\.0$ ]]; then
+            echo "Tag $TAG is a major release"
+            echo "is_major=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag $TAG is not a major release (only vX.0.0 tags trigger a build)"
+            echo "is_major=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Lints before anything is built: a release stops on any clippy warning.
+  # It runs the newest stable clippy, so a Rust release with new lints can
+  # stop a release too -- fix them (or allow them, with a reason) and tag again.
+  clippy:
+    needs: check-tag
+    if: needs.check-tag.outputs.is_major == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: clippy
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  build:
+    needs: [check-tag, clippy]
+    if: needs.check-tag.outputs.is_major == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: aarch64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}, wasm32-unknown-unknown
+
+      # trunk builds fluxoscope (the web UI) to WebAssembly. Each runner
+      # builds for its own platform, so the target triple names its binary.
+      - name: Install trunk
+        shell: bash
+        run: |
+          mkdir -p "$HOME/bin"
+          curl -sSL "https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-${{ matrix.target }}.tar.gz" | tar -xz -C "$HOME/bin" trunk
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release --locked -p fluxolap-server -p fluxoterm --target ${{ matrix.target }}
+
+      - name: Build the web UI (fluxoscope)
+        working-directory: crates/fluxoscope
+        run: trunk build --release --cargo-profile wasm-release --dist ../../dist/ui
+
+      # Built from examples/sources at release time, so they always match
+      # this version's database file format.
+      - name: Build example databases
+        run: cargo run --release --locked -p xtask -- examples dist/examples
+
+      - name: Package
+        shell: bash
+        run: |
+          rm -f dist/examples/registry.bin.zst
+          cp examples/README.md dist/examples/
+          cp target/${{ matrix.target }}/release/fluxolap target/${{ matrix.target }}/release/fluxoterm dist/
+          cp README.md LICENSE-MIT LICENSE-APACHE ACKNOWLEDGMENTS.md start.sh dist/
+          python3 clients/libreoffice/build.py dist/fluxolap.oxt
+          mkdir -p dist/licenses/swagger-ui
+          cp crates/fluxolap-api/assets/swagger-ui/{LICENSE,NOTICE,swagger-ui-bundle.js.LICENSE.txt} dist/licenses/swagger-ui/
+          tar czf fluxolap-${{ github.ref_name }}-${{ matrix.target }}.tar.gz -C dist README.md LICENSE-MIT LICENSE-APACHE ACKNOWLEDGMENTS.md start.sh fluxolap fluxoterm fluxolap.oxt ui examples licenses
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: fluxolap-${{ matrix.target }}
+          path: fluxolap-*.tar.gz
+          if-no-files-found: ignore
+
+  release:
+    needs: [check-tag, build]
+    if: needs.check-tag.outputs.is_major == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v5
+        with:
+          pattern: fluxolap-*
+          path: dist
+          merge-multiple: true
+
+      # The LibreOffice Calc extension as a download of its own (it's
+      # platform-independent: Python).
+      - name: Build the LibreOffice extension
+        run: python3 clients/libreoffice/build.py dist/fluxolap-${{ github.ref_name }}.oxt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+
+  docker:
+    needs: [check-tag, clippy]
+    if: needs.check-tag.outputs.is_major == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ghcr.io/${{ github.repository }}:latest
