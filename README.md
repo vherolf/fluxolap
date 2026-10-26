@@ -38,6 +38,27 @@ Then open <http://localhost:7777/ui/> in a browser for fluxoscope.
 - **fluxoterm.** Starts in read-only VIEW mode; `i` switches to EDIT and `Esc` back. `:q` quits and `?` lists every key. `fluxoterm http://host:7777` connects to another server; for a remote one, tunnel over SSH: `ssh -N -L 17777:localhost:7777 user@host`, then `fluxoterm http://localhost:17777`.
 - **No login.** The server has no authentication and listens on all network interfaces, so don't expose port 7777 beyond networks you trust.
 
+## Quick start (Docker)
+
+The image is public on GitHub's container registry, no login needed. It contains the server, fluxoterm, fluxoscope and the example databases, which it imports at startup.
+
+```bash
+docker run -p 7777:7777 ghcr.io/vherolf/fluxolap
+```
+
+Then open <http://localhost:7777/ui/> for fluxoscope or <http://localhost:7777/api/v1/docs> for the API docs. `Ctrl+C` stops it.
+
+- **Tags.** `latest` (the default) is the newest release; every release also has its version tag, e.g. `ghcr.io/vherolf/fluxolap:v1.0.0`. `latest` changes only when you `docker pull` again. For a server that keeps data, pin a version tag, so a pull doesn't bring a new major version unnoticed.
+- **Another port.** `-p 7778:7777` serves it on <http://localhost:7778/> (the second number is the port inside the container).
+- **Keep your data.** Without a data folder everything is in memory and gone when the container stops:
+  ```bash
+  docker run -p 7777:7777 -e FLUXOLAP_DATA_DIR=/data -v "$HOME/fluxolap-data:/data" ghcr.io/vherolf/fluxolap:v1.0.0
+  ```
+  It saves on a normal stop (`Ctrl+C`, `docker stop`), not on `docker kill`.
+- **In the background.** `docker run -d --name fluxolap -p 7777:7777 ghcr.io/vherolf/fluxolap`, then `docker logs fluxolap`, and `docker stop fluxolap` to stop it.
+- **Without the examples.** Add `-e FLUXOLAP_EXAMPLES=`.
+- **fluxoterm.** `docker exec -it fluxolap fluxoterm` runs the terminal client inside a container named `fluxolap`.
+
 ## Try it with example data
 
 fluxolap ships with eight example databases built from real open data: a UK online shop's sales, every Nobel Prize, the world's population to 2100, CO₂ emissions and the atmosphere, every known exoplanet, 100,000 particle collisions from CERN's LHC, 4.6 million human genetic variants from ClinVar, and the bile acids of people with Parkinson's disease (metabolomics). See [examples/README.md](examples/README.md) for what's in them and queries to try.
