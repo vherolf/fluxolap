@@ -12,7 +12,7 @@ And for spreadsheets, **fluxolap for LibreOffice Calc**: an extension with cube 
 
 ### See it work
 
-Every clip uses a different one of the [example databases](examples/README.md) that come with fluxolap.
+The clips use the [example databases](examples/README.md) that come with fluxolap.
 
 **fluxoscope**, the web app: a pivot table you drill into, and charts of the same view.
 
@@ -22,7 +22,7 @@ Every clip uses a different one of the [example databases](examples/README.md) t
 | **WorldPopulation: the age structure of 10 billion people.** UN estimates and projections from 1950 to 2100, by age group. | ![fluxoscope: world population by age group](docs/media/fluxoscope-population.gif) |
 | **Exoplanets: a planet-finding boom.** Discoveries per year by detection method; the Kepler years stand out. | ![fluxoscope: exoplanet discoveries by method](docs/media/fluxoscope-exoplanets.gif) |
 | **NobelPrizes: a century of laureates.** Prizes per category and decade, as a table and as charts. | ![fluxoscope: Nobel prizes by category and decade](docs/media/fluxoscope-nobel.gif) |
-| **OnlineRetail: drill down.** Open years into quarters and regions into countries, and turn on the heatmap. | ![fluxoscope: drilling into sales](docs/media/fluxoscope-drill.gif) |
+| **Metabolomics: Parkinson's against healthy controls.** Bile acid concentrations in blood plasma, summed per bile acid group: higher in the Parkinson's samples in every group. | ![fluxoscope: bile acids in Parkinson's and healthy controls](docs/media/fluxoscope-metabolomics.gif) |
 
 **fluxoterm**, the terminal app (vim-like):
 
@@ -30,7 +30,7 @@ Every clip uses a different one of the [example databases](examples/README.md) t
 |---|---|
 | **GeneticVariants: from chromosomes to genes.** 4.6 million variants: open a row with `Space` and a column with `x`. | ![fluxoterm: drilling into genetic variants](docs/media/fluxoterm-genetics-drill.gif) |
 | **Climate: emissions over time.** Drill into Europe's countries, then move across 170 years of columns. | ![fluxoterm: emissions per country, 1850 to 2020](docs/media/fluxoterm-climate.gif) |
-| **Metabolomics: splashing.** Write a value into a consolidated cell and it spreads down to the cells below. | ![fluxoterm: splashing a value into bile acid concentrations](docs/media/fluxoterm-metabolomics-splash.gif) |
+| **OnlineRetail: splashing.** Set a new Q4 2011 revenue for Continental Europe and it spreads down to its countries in proportion to what each one sold; the totals above update. | ![fluxoterm: splashing a revenue target into countries](docs/media/fluxoterm-retail-splash.gif) |
 | **OnlineRetail: pivot.** Pick the dimensions for rows and columns, then swap them with `s`. | ![fluxoterm: pivoting a cube](docs/media/fluxoterm-pivot.gif) |
 
 ## Quick start (Docker)
