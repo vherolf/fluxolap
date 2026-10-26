@@ -16,15 +16,26 @@ And for spreadsheets, **fluxolap for LibreOffice Calc**: an extension with cube 
 
 ### See it work
 
-The clips use the example databases that come with fluxolap.
+Every clip uses a different one of the [example databases](examples/README.md) that come with fluxolap.
+
+**fluxoscope**, the web app: a pivot table you drill into, and charts of the same view.
 
 | | |
 |---|---|
-| **fluxoscope: drill down.** Open years into quarters and regions into countries, and turn on the heatmap. | ![fluxoscope drill-down with heatmap](docs/media/fluxoscope-drill.gif) |
-| **fluxoscope: charts.** The same view as a line, bar or stacked chart. | ![fluxoscope charts](docs/media/fluxoscope-charts.gif) |
-| **fluxoterm: drill down.** Open rows with `Space` and columns with `x`. | ![fluxoterm drill-down](docs/media/fluxoterm-drill.gif) |
-| **fluxoterm: pivot.** Pick the dimensions for rows and columns, then swap them with `s`. | ![fluxoterm pivot](docs/media/fluxoterm-pivot.gif) |
-| **fluxoterm: splashing.** Write to a consolidated cell and the value spreads down to its base cells. | ![fluxoterm splash](docs/media/fluxoterm-splash.gif) |
+| **Climate: where CO₂ comes from.** 175 years of emissions by source, from a heatmap table to stacked, line and bar charts. | ![fluxoscope: CO2 emissions by source since 1850](docs/media/fluxoscope-emissions.gif) |
+| **WorldPopulation: the age structure of 10 billion people.** UN estimates and projections from 1950 to 2100, by age group. | ![fluxoscope: world population by age group](docs/media/fluxoscope-population.gif) |
+| **Exoplanets: a planet-finding boom.** Discoveries per year by detection method; the Kepler years stand out. | ![fluxoscope: exoplanet discoveries by method](docs/media/fluxoscope-exoplanets.gif) |
+| **NobelPrizes: a century of laureates.** Prizes per category and decade, as a table and as charts. | ![fluxoscope: Nobel prizes by category and decade](docs/media/fluxoscope-nobel.gif) |
+| **OnlineRetail: drill down.** Open years into quarters and regions into countries, and turn on the heatmap. | ![fluxoscope: drilling into sales](docs/media/fluxoscope-drill.gif) |
+
+**fluxoterm**, the terminal app (vim-like):
+
+| | |
+|---|---|
+| **GeneticVariants: from chromosomes to genes.** 4.6 million variants: open a row with `Space` and a column with `x`. | ![fluxoterm: drilling into genetic variants](docs/media/fluxoterm-genetics-drill.gif) |
+| **Climate: emissions over time.** Drill into Europe's countries, then move across 170 years of columns. | ![fluxoterm: emissions per country, 1850 to 2020](docs/media/fluxoterm-climate.gif) |
+| **Metabolomics: splashing.** Write a value into a consolidated cell and it spreads down to the cells below. | ![fluxoterm: splashing a value into bile acid concentrations](docs/media/fluxoterm-metabolomics-splash.gif) |
+| **OnlineRetail: pivot.** Pick the dimensions for rows and columns, then swap them with `s`. | ![fluxoterm: pivoting a cube](docs/media/fluxoterm-pivot.gif) |
 
 ## Quick start (release download)
 
