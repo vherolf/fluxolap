@@ -58,10 +58,18 @@ Then open <http://localhost:7777/ui/> for fluxoscope or <http://localhost:7777/a
 
 A release tarball contains `fluxolap` (the server), `fluxoterm` (the terminal viewer/editor), `ui/` (fluxoscope, the web app), `fluxolap.oxt` (the LibreOffice Calc extension), `examples/` (eight example databases), `start.sh` and this README.
 
+Download the latest release from the [releases page](https://github.com/vherolf/fluxolap/releases/latest), or on the command line. These links always point at the newest release:
+
 ```bash
-tar xzf fluxolap-<version>-<platform>.tar.gz
+mkdir fluxolap && cd fluxolap
+# Linux (x86_64)
+curl -L https://github.com/vherolf/fluxolap/releases/latest/download/fluxolap-x86_64-unknown-linux-gnu.tar.gz | tar xz
+# macOS (Apple silicon)
+curl -L https://github.com/vherolf/fluxolap/releases/latest/download/fluxolap-aarch64-apple-darwin.tar.gz | tar xz
 ./start.sh                     # the server with the examples; prints how to connect
 ```
+
+The LibreOffice Calc extension is also a download of its own: <https://github.com/vherolf/fluxolap/releases/latest/download/fluxolap.oxt>.
 
 `start.sh` starts fluxolap with the example databases loaded. It prints the addresses for fluxoscope (in a browser, also from other computers on your network) and the fluxoterm command, then waits: `Ctrl+C` stops the server. `FLUXOLAP_PORT` and `FLUXOLAP_DATA_DIR` work as below. It also runs from a source checkout after `cargo build --release` (it then uses `target/release`, `target/examples` and `target/ui`).
 

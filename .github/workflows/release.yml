@@ -133,6 +133,17 @@ jobs:
       - name: Build the LibreOffice extension
         run: python3 clients/libreoffice/build.py dist/fluxolap-${{ github.ref_name }}.oxt
 
+      # Copies without the version in the name, so that
+      # https://github.com/<repo>/releases/latest/download/<name> always
+      # points at the newest release (fluxolap-v1.0.0-<target>.tar.gz
+      # becomes fluxolap-<target>.tar.gz, fluxolap-v1.0.0.oxt fluxolap.oxt).
+      - name: Add download names that don't change
+        run: |
+          for f in dist/fluxolap-${{ github.ref_name }}*; do
+            cp "$f" "${f/-${{ github.ref_name }}/}"
+          done
+          ls -l dist
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
