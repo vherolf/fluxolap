@@ -2,10 +2,16 @@ name: Release
 
 # Only tags shaped like vX.Y.Z reach the workflow at all; the check-tag job
 # then gates the actual build/release on it being a major release (vX.0.0).
+#
+# A manual run (Actions tab, "Run workflow") is a rehearsal: it does every step
+# of a release as v0.0.0-test, but publishes nothing. It makes no GitHub Release
+# and pushes no Docker image; the files it would have released come as a
+# downloadable artifact (release-files) of the run.
 on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -14,18 +20,33 @@ jobs:
   check-tag:
     runs-on: ubuntu-latest
     outputs:
+      # Whether to build at all (a major tag, or a manual rehearsal).
       is_major: ${{ steps.check.outputs.is_major }}
+      # Whether to publish what was built (a major tag only).
+      publish: ${{ steps.check.outputs.publish }}
+      # The version in the file names and the image tag.
+      version: ${{ steps.check.outputs.version }}
     steps:
       - name: Check for major release tag (vX.0.0)
         id: check
         run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual run: a rehearsal as v0.0.0-test, nothing is published"
+            echo "is_major=true" >> "$GITHUB_OUTPUT"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "version=v0.0.0-test" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           TAG="${{ github.ref_name }}"
+          echo "version=$TAG" >> "$GITHUB_OUTPUT"
           if [[ "$TAG" =~ ^v[0-9]+\.0\.0$ ]]; then
             echo "Tag $TAG is a major release"
             echo "is_major=true" >> "$GITHUB_OUTPUT"
+            echo "publish=true" >> "$GITHUB_OUTPUT"
           else
             echo "Tag $TAG is not a major release (only vX.0.0 tags trigger a build)"
             echo "is_major=false" >> "$GITHUB_OUTPUT"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
           fi
 
   # Lints before anything is built: a release stops on any clippy warning.
@@ -105,7 +126,7 @@ jobs:
           python3 clients/libreoffice/build.py dist/fluxolap.oxt
           mkdir -p dist/licenses/swagger-ui
           cp crates/fluxolap-api/assets/swagger-ui/{LICENSE,NOTICE,swagger-ui-bundle.js.LICENSE.txt} dist/licenses/swagger-ui/
-          tar czf fluxolap-${{ github.ref_name }}-${{ matrix.target }}.tar.gz -C dist README.md LICENSE-MIT LICENSE-APACHE ACKNOWLEDGMENTS.md start.sh fluxolap fluxoterm fluxolap.oxt ui examples licenses
+          tar czf fluxolap-${{ needs.check-tag.outputs.version }}-${{ matrix.target }}.tar.gz -C dist README.md LICENSE-MIT LICENSE-APACHE ACKNOWLEDGMENTS.md start.sh fluxolap fluxoterm fluxolap.oxt ui examples licenses
 
       - name: Upload artifact
         uses: actions/upload-artifact@v5
@@ -131,7 +152,7 @@ jobs:
       # The LibreOffice Calc extension as a download of its own (it's
       # platform-independent: Python).
       - name: Build the LibreOffice extension
-        run: python3 clients/libreoffice/build.py dist/fluxolap-${{ github.ref_name }}.oxt
+        run: python3 clients/libreoffice/build.py dist/fluxolap-${{ needs.check-tag.outputs.version }}.oxt
 
       # Copies without the version in the name, so that
       # https://github.com/<repo>/releases/latest/download/<name> always
@@ -139,16 +160,26 @@ jobs:
       # becomes fluxolap-<target>.tar.gz, fluxolap-v1.0.0.oxt fluxolap.oxt).
       - name: Add download names that don't change
         run: |
-          for f in dist/fluxolap-${{ github.ref_name }}*; do
-            cp "$f" "${f/-${{ github.ref_name }}/}"
+          for f in dist/fluxolap-${{ needs.check-tag.outputs.version }}*; do
+            cp "$f" "${f/-${{ needs.check-tag.outputs.version }}/}"
           done
           ls -l dist
 
       - name: Create GitHub Release
+        if: needs.check-tag.outputs.publish == 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
           generate_release_notes: true
+
+      # A rehearsal keeps the files instead, for a look at what a release holds.
+      - name: Keep the files of a rehearsal
+        if: needs.check-tag.outputs.publish != 'true'
+        uses: actions/upload-artifact@v5
+        with:
+          name: release-files
+          path: dist/*
+          retention-days: 7
 
   docker:
     needs: [check-tag, clippy]
@@ -161,17 +192,20 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Log in to GitHub Container Registry
+        if: needs.check-tag.outputs.publish == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # A rehearsal builds the image too (so a broken Dockerfile shows) but
+      # doesn't push it.
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ needs.check-tag.outputs.publish == 'true' }}
           tags: |
-            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ghcr.io/${{ github.repository }}:${{ needs.check-tag.outputs.version }}
             ghcr.io/${{ github.repository }}:latest
