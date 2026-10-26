@@ -6,7 +6,7 @@ Three partners ship together:
 
 - **fluxolap**: the server and its REST API.
 - **fluxoterm**: a terminal app to view, edit, load and export cubes (vim-like).
-- **fluxoscope**: a web app with pivot tables and charts, served by fluxolap at <http://localhost:7777/ui>.
+- **fluxoscope**: a view-only web app with pivot tables and charts, served by fluxolap at <http://localhost:7777/ui>.
 
 And for spreadsheets, **fluxolap for LibreOffice Calc**: an extension with cube formulas like `=FLUX.DATA(…)` (see [below](#fluxolap-for-libreoffice-calc)).
 
@@ -201,6 +201,8 @@ The bottom line always shows the mode: a grey `VIEW`, or a red `EDIT` like vim's
 It reads by name, shows problems as `#FLUX: …` in the cell, and batches: after the first calculation, a sheet's formulas are re-read in one request (Ctrl+Shift+F9). A **fluxolap menu** builds reports for you (*Paste view*: pick a cube, rows, columns and filters), loads databases, and refreshes. In a pasted view, **double-click** a total to open or close it, a filter to pick another element, or the title to change the view. **Writing back:** type a value over a `FLUX.DATA` cell. It goes to the server (a total splashes down to its base cells), and the formula stays and shows the new value. Details, including a pitfall with Python virtualenvs, are in [clients/libreoffice/README.md](clients/libreoffice/README.md).
 
 ## fluxoscope: the web app
+
+> **View only.** fluxoscope shows and charts your data; it can't change cells, dimensions or elements. To edit, use fluxoterm (EDIT mode) or the REST API. The only thing it writes to the server is loading a database.
 
 fluxoscope is fluxolap's web app for exploring and charting cubes. It is written in Rust with [Leptos](https://leptos.dev) and compiled to WebAssembly, so the only JavaScript is the generated glue. Like fluxoterm, it uses the REST API and the server's own request/response types (`fluxolap-api-types`). fluxolap serves it at <http://localhost:7777/ui>; the release tarballs and the Docker image include it.
 
