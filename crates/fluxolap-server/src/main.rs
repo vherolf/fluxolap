@@ -79,6 +79,51 @@ fn import_examples(state: &AppState) {
     }
 }
 
+/// What runs beside the REST API when the server is built with `--features
+/// mesh` (docs/mesh.md): the mesh, if `FLUXOLAP_MESH_NODE` is set, and the
+/// sensor ingest, if `FLUXOLAP_SENSOR_LISTEN` is. The handles have to stay
+/// alive; the mesh's control goes into the API's options.
+struct Extras {
+    _running: Vec<Box<dyn std::any::Any>>,
+    mesh: Option<std::sync::Arc<dyn fluxolap_api::MeshControl>>,
+}
+
+#[cfg(feature = "mesh")]
+fn start_extras(state: &AppState, data_dir: Option<&std::path::Path>) -> Extras {
+    let mut running: Vec<Box<dyn std::any::Any>> = Vec::new();
+    let mut control = None;
+    match fluxolap_mesh::MeshConfig::from_env(data_dir) {
+        Ok(Some(config)) => {
+            let node = config.node.clone();
+            let mesh = fluxolap_mesh::Mesh::start(state.clone(), config).unwrap_or_else(|e| panic!("mesh: {e}"));
+            tracing::info!("mesh node {node} started");
+            control = Some(mesh.control());
+            running.push(Box::new(mesh));
+        }
+        Ok(None) => {}
+        Err(e) => panic!("mesh: {e}"),
+    }
+    match fluxolap_mesh::sensor::SensorConfig::from_env() {
+        Ok(Some(config)) => {
+            tracing::info!("sensor ingest: MQTT on {}, writing through {}", config.listen, config.api);
+            running.push(Box::new(fluxolap_mesh::sensor::start(config).unwrap_or_else(|e| panic!("sensor: {e}"))));
+        }
+        Ok(None) => {}
+        Err(e) => panic!("sensor: {e}"),
+    }
+    Extras { _running: running, mesh: control }
+}
+
+#[cfg(not(feature = "mesh"))]
+fn start_extras(_: &AppState, _: Option<&std::path::Path>) -> Extras {
+    for var in ["FLUXOLAP_MESH_NODE", "FLUXOLAP_SENSOR_LISTEN"] {
+        if std::env::var_os(var).is_some() {
+            tracing::warn!("{var} is set, but this build has no mesh or sensor ingest (build with --features mesh)");
+        }
+    }
+    Extras { _running: Vec::new(), mesh: None }
+}
+
 /// Resolves on Ctrl-C, SIGTERM, or `AppState::shutdown` being notified,
 /// whichever comes first -- drives `axum::serve`'s graceful shutdown, so
 /// the same save-state-if-configured sequence runs no matter which of the
@@ -107,7 +152,9 @@ async fn shutdown_signal(state: AppState) {
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
+    // An explicit level rather than `fmt::init()`: the mesh's broker enables
+    // tracing-subscriber's `env-filter`, which would make `init()` log errors only.
+    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
 
     let data_dir = data_dir_path();
 
@@ -134,6 +181,7 @@ async fn main() {
         None => AppState::new(),
     };
     import_examples(&state);
+    let extras = start_extras(&state, data_dir.as_deref());
 
     let port = listen_port();
     let listener = tokio::net::TcpListener::bind(("0.0.0.0", port))
@@ -144,6 +192,7 @@ async fn main() {
         cors: fluxolap_api::Cors::parse(&std::env::var("FLUXOLAP_CORS_ORIGINS").unwrap_or_default()),
         ui_dir: ui_dir(),
         examples_dirs: examples_dirs(),
+        mesh: extras.mesh.clone(),
     };
     if options.cors != fluxolap_api::Cors::Off {
         tracing::info!("CORS enabled for {:?}", options.cors);

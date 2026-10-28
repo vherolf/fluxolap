@@ -5,4 +5,5 @@ pub mod dimensions;
 pub mod elements;
 pub mod examples;
 pub mod locks;
+pub mod mesh;
 pub mod stats;

@@ -24,7 +24,8 @@ use axum::response::Redirect;
 use axum::routing::{get, post};
 use axum::Router;
 use fluxolap_engine::AppState;
-use handlers::{cells, cubes, databases, dimensions, elements, examples, locks, stats};
+use handlers::{cells, cubes, databases, dimensions, elements, examples, locks, mesh, stats};
+pub use handlers::mesh::{MeshControl, MeshError};
 use utoipa::OpenApi;
 
 pub const PREFIX: &str = "/api/v1";
@@ -46,6 +47,7 @@ pub const MAX_BODY_BYTES: usize = 512 * 1024 * 1024;
         cells::export, cells::query, cells::write_many, cells::clear, cells::get, cells::put,
         locks::list, locks::create, locks::get, locks::commit, locks::rollback,
         examples::list, examples::import,
+        mesh::status, mesh::import,
     ),
     components(schemas(error::Problem)),
     tags(
@@ -56,6 +58,7 @@ pub const MAX_BODY_BYTES: usize = 512 * 1024 * 1024;
         (name = "cubes"),
         (name = "cells", description = "Batch-first: `PUT /cells` writes and `POST /cells/query` reads many cells per request."),
         (name = "locks"),
+        (name = "mesh", description = "Friends exchanging database catalogs over MQTT, see docs/mesh.md. 404 unless the server runs with the mesh."),
         (name = "examples", description = "The example database files the server offers to import (see `FLUXOLAP_EXAMPLES`), for clients that can't upload a file from the server's disk."),
     )
 )]
@@ -64,6 +67,8 @@ pub struct ApiDoc;
 /// Optional server behavior, all off by default.
 #[derive(Debug, Clone, Default)]
 pub struct Options {
+    /// A running mesh (`fluxolap-mesh`) for `/api/v1/mesh`; without one those endpoints answer 404.
+    pub mesh: Option<std::sync::Arc<dyn MeshControl>>,
     /// Which browser origins may call the API from another site (CORS).
     pub cors: Cors,
     /// A directory with a static web app (e.g. fluxoscope's build) to
@@ -134,7 +139,9 @@ pub fn router_with(state: AppState, options: Options) -> Router {
         .route(&format!("{db}/cubes/:cube/locks/:lock/rollback"), post(locks::rollback))
         .route("/api/v1/stats", get(stats::stats))
         .route("/api/v1/examples", get(examples::list))
-        .route("/api/v1/examples/:file/import", post(examples::import));
+        .route("/api/v1/examples/:file/import", post(examples::import))
+        .route("/api/v1/mesh", get(mesh::status))
+        .route("/api/v1/mesh/friends/:friend/databases/:database/import", post(mesh::import));
 
     let home = if options.ui_dir.is_some() { "/ui/" } else { "/api/v1/docs" };
     let mut app = api.route("/", get(move || async move { Redirect::temporary(home) }));
@@ -149,6 +156,7 @@ pub fn router_with(state: AppState, options: Options) -> Router {
         .fallback(|| async { error::ApiError::route_not_found() })
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         .layer(axum::Extension(examples::ExampleDirs(std::sync::Arc::new(options.examples_dirs))))
+        .layer(axum::Extension(mesh::MeshExt(options.mesh)))
         .layer(axum::Extension(metrics))
         .layer(axum::middleware::from_fn(move |request, next| stats::track(tracked.clone(), request, next)))
         .with_state(state);

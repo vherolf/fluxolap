@@ -1,0 +1,27 @@
+[package]
+name = "fluxolap-mesh"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "fluxolap-friends"
+path = "src/bin/friends.rs"
+
+[dependencies]
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+axum.workspace = true
+reqwest.workspace = true
+rumqttd = { version = "0.20", default-features = false }
+rumqttc = { version = "0.25", default-features = false }
+fluxolap-domain = { path = "../fluxolap-domain" }
+fluxolap-storage = { path = "../fluxolap-storage" }
+fluxolap-engine = { path = "../fluxolap-engine" }
+fluxolap-api = { path = "../fluxolap-api" }
+fluxolap-api-types = { path = "../fluxolap-api-types" }
+
+[dev-dependencies]
+tokio.workspace = true

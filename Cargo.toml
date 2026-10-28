@@ -8,6 +8,7 @@ members = [
     "crates/fluxolap-api-types",
     "crates/fluxolap-api",
     "crates/fluxolap-examples",
+    "crates/fluxolap-mesh",
     "crates/fluxolap-server",
     "crates/fluxoterm",
     "crates/fluxoscope",

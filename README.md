@@ -33,6 +33,10 @@ The clips use the [example databases](examples/README.md) that come with fluxola
 | **OnlineRetail: splashing.** Set a new Q4 2011 revenue for Continental Europe and it spreads down to its countries in proportion to what each one sold; the totals above update. | ![fluxoterm: splashing a revenue target into countries](docs/media/fluxoterm-retail-splash.gif) |
 | **OnlineRetail: pivot.** Pick the dimensions for rows and columns, then swap them with `s`. | ![fluxoterm: pivoting a cube](docs/media/fluxoterm-pivot.gif) |
 
+## The mesh
+
+Fluxolap nodes can be friends: they tell each other, over MQTT, which databases and cubes they have calculated, and fetch them from each other, by themselves or on request, as copies. Sensors can publish cell values over MQTT too. It is off by default, built with `--features mesh`; see [docs/mesh.md](docs/mesh.md).
+
 ## Quick start (Docker)
 
 The image is public on GitHub's container registry, no login needed. It contains the server, fluxoterm, fluxoscope and the example databases, which it imports at startup.

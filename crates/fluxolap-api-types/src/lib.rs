@@ -830,3 +830,84 @@ pub struct RollbackQuery {
     /// and release the lock.
     pub steps: Option<u32>,
 }
+
+// ---------------------------------------------------------------------------
+// Mesh
+// ---------------------------------------------------------------------------
+
+/// Where a friend's database stands against this node's copy of it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum MeshState {
+    /// No copy here yet.
+    New,
+    /// The copy is as new as the friend's database.
+    Current,
+    /// The friend's database changed since the copy was made.
+    Update,
+    /// The friend doesn't know when its database changed (not loaded there).
+    Unknown,
+    /// A transfer is running.
+    Importing,
+}
+
+/// What happens when a friend's database is new or newer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum MeshPolicy {
+    /// Imported as soon as the friend announces it.
+    Auto,
+    /// Only shown here; imported by `POST .../import`.
+    Notify,
+    /// Not imported by itself (an explicit `POST .../import` still works).
+    Off,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct MeshCube {
+    pub name: String,
+    /// Unix seconds of the last change to the cube's cells.
+    pub modified: Option<u64>,
+    pub cells: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct MeshDatabase {
+    /// The database's name at the friend.
+    pub name: String,
+    /// The friend's REST id of it.
+    pub id: u32,
+    /// Unix seconds of its last change at the friend; `null`: unknown.
+    pub modified: Option<u64>,
+    pub cubes: Vec<MeshCube>,
+    /// The name of the copy here: `<friend>/<name>`.
+    pub local_name: String,
+    pub policy: MeshPolicy,
+    pub state: MeshState,
+    /// The friend's `modified` as it was when the copy was made.
+    pub imported_modified: Option<u64>,
+    /// Unix seconds the copy was made.
+    pub imported_at: Option<u64>,
+    /// Why the last import failed, if it did.
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct MeshFriend {
+    pub id: String,
+    /// `host:port` of the friend's mesh broker.
+    pub mqtt: String,
+    /// Base URL of the friend's REST API.
+    pub api: String,
+    /// Whether the connection to the friend's broker is up. The databases
+    /// are what it last announced, also while it is away.
+    pub connected: bool,
+    pub databases: Vec<MeshDatabase>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct MeshDto {
+    /// This node's id.
+    pub node: String,
+    pub friends: Vec<MeshFriend>,
+}

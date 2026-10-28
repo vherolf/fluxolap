@@ -279,7 +279,7 @@ async fn openapi_spec_describes_every_route() {
     let api = Api::spawn().await;
     let spec: Value = api.get("/openapi.json").await.json().await.unwrap();
     let paths = spec["paths"].as_object().unwrap();
-    assert_eq!(paths.len(), 22, "the docs routes aren't part of the API spec");
+    assert_eq!(paths.len(), 24, "the docs routes aren't part of the API spec");
     let element_ops = paths["/api/v1/databases/{db}/dimensions/{dim}/elements"].as_object().unwrap();
     for method in ["get", "post", "put", "patch", "delete"] {
         assert!(element_ops.contains_key(method), "missing {method}");
@@ -498,4 +498,15 @@ async fn skip_empty_leaves_out_cells_without_a_value() {
     let paths: Vec<&Value> = sparse["items"].as_array().unwrap().iter().map(|c| &c["path"]).collect();
     assert_eq!(paths, [&json!([0, 0]), &json!([0, 2]), &json!([1, 0]), &json!([1, 2])]);
     assert_eq!(sparse["total"], 4);
+}
+
+#[tokio::test]
+async fn the_mesh_endpoints_are_a_404_problem_without_a_mesh() {
+    let api = Api::spawn().await;
+    for r in [api.get("/mesh").await, api.send(reqwest::Method::POST, "/mesh/friends/b/databases/Sales/import", None).await] {
+        assert_eq!(r.status(), StatusCode::NOT_FOUND);
+        assert_eq!(r.json::<Value>().await.unwrap()["code"], "mesh_disabled");
+    }
+    let spec: Value = api.get("/openapi.json").await.json().await.unwrap();
+    assert!(spec["paths"]["/api/v1/mesh"]["get"].is_object() && spec["paths"]["/api/v1/mesh/friends/{friend}/databases/{database}/import"]["post"].is_object());
 }

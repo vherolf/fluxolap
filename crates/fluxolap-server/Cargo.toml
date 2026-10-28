@@ -15,3 +15,9 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 fluxolap-engine = { path = "../fluxolap-engine" }
 fluxolap-api = { path = "../fluxolap-api" }
+fluxolap-mesh = { path = "../fluxolap-mesh", optional = true }
+
+[features]
+# Friends exchange catalogs of their databases over MQTT (docs/mesh.md).
+# Off unless built with it, and then only active with FLUXOLAP_MESH_NODE set.
+mesh = ["dep:fluxolap-mesh"]

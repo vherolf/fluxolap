@@ -651,6 +651,25 @@ impl AppState {
         self.import_parts(file)
     }
 
+    /// Imports a per-database file's bytes under `name` instead of the name
+    /// the file carries. If a database called `name` exists, it is an error
+    /// (`DATABASE_NAME_IN_USE`) unless `replace` is set, which swaps that
+    /// database's contents in place: it keeps its id, and requests that are
+    /// already running keep reading the old contents until they finish.
+    pub fn import_database_bytes_as(&self, bytes: &[u8], name: &str, replace: bool) -> Result<DatabaseId, FluxolapError> {
+        let (mut identity, snapshot, storage_data) = load_database_file(bytes)
+            .map_err(|e| FluxolapError::new(ErrorCode::ILLEGAL_PARAMETER_VALUE, "invalid database file", format!("not a fluxolap database file: {e}")))?;
+        identity.name = name.to_string();
+        let existing = self.databases.read().expect("databases lock poisoned").find_by_name(name);
+        match existing {
+            Some(id) if replace => {
+                self.insert_loaded_from_snapshot(id, snapshot, storage_data);
+                Ok(id)
+            }
+            _ => self.import_parts((identity, snapshot, storage_data)),
+        }
+    }
+
     fn import_parts(&self, (identity, snapshot, storage_data): DatabaseFile) -> Result<DatabaseId, FluxolapError> {
         let mut databases = self.databases.write().expect("databases lock poisoned");
         let id = databases.create(&identity.name, identity.db_type).map_err(crate::ops::map_database_error)?;
