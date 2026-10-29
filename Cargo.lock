@@ -836,7 +836,7 @@ dependencies = [
 
 [[package]]
 name = "fluxolap-api"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "axum",
  "fluxolap-api-types",
@@ -854,7 +854,7 @@ dependencies = [
 
 [[package]]
 name = "fluxolap-api-types"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "fluxolap-domain",
  "fluxolap-storage",
@@ -864,7 +864,7 @@ dependencies = [
 
 [[package]]
 name = "fluxolap-domain"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "proptest",
  "serde",
@@ -873,7 +873,7 @@ dependencies = [
 
 [[package]]
 name = "fluxolap-engine"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "bincode",
  "fluxolap-domain",
@@ -887,14 +887,14 @@ dependencies = [
 
 [[package]]
 name = "fluxolap-error"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "thiserror 1.0.69",
 ]
 
 [[package]]
 name = "fluxolap-examples"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "csv",
  "flate2",
@@ -907,7 +907,7 @@ dependencies = [
 
 [[package]]
 name = "fluxolap-server"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "axum",
  "fluxolap-api",
@@ -920,7 +920,7 @@ dependencies = [
 
 [[package]]
 name = "fluxolap-storage"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "bincode",
  "fluxolap-domain",
@@ -933,7 +933,7 @@ dependencies = [
 
 [[package]]
 name = "fluxoscope"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "console_error_panic_hook",
  "fluxolap-api-types",
@@ -947,7 +947,7 @@ dependencies = [
 
 [[package]]
 name = "fluxoterm"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "axum",
  "fluxolap-api",
@@ -4237,7 +4237,7 @@ checksum = "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
 
 [[package]]
 name = "xtask"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "fluxolap-domain",
  "fluxolap-engine",
