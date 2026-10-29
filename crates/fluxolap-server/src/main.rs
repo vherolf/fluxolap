@@ -10,9 +10,9 @@ fn listen_port() -> u16 {
 /// Persistence: if set, the server loads its database registry plus
 /// every registered database from this directory on startup, and saves
 /// every loaded database (plus the registry) back to it on clean shutdown
-/// (SIGINT/SIGTERM). Unset means fully in-memory. Persistence is
-/// per-database (one file per database plus a registry file, all under
-/// this directory) -- see `fluxolap_engine::state`'s doc comments for the
+/// (SIGINT/SIGTERM, or SIGPWR on Linux). Unset means fully in-memory.
+/// Persistence is per-database (one file per database plus a registry
+/// file, all under this directory) -- see `fluxolap_engine::state`'s doc comments for the
 /// full design.
 ///
 /// Unlike an embedding application (which can load databases on demand
@@ -79,11 +79,17 @@ fn import_examples(state: &AppState) {
     }
 }
 
-/// Resolves on Ctrl-C, SIGTERM, or `AppState::shutdown` being notified,
-/// whichever comes first -- drives `axum::serve`'s graceful shutdown, so
-/// the same save-state-if-configured sequence runs no matter which of the
-/// three triggered it. Unix-only is fine -- Windows is an explicit
+/// Resolves on Ctrl-C, SIGTERM, SIGPWR (Linux only), or `AppState::shutdown`
+/// being notified, whichever comes first -- drives `axum::serve`'s graceful
+/// shutdown, so the same save-state-if-configured sequence runs no matter
+/// which of them triggered it. Unix-only is fine -- Windows is an explicit
 /// non-goal (see PLAN.md).
+///
+/// SIGPWR is how LXC stops a container (`lxc.signal.halt`'s default), e.g.
+/// `pct shutdown` on Proxmox. In a container made from the OCI image the
+/// server is PID 1, and the kernel drops a signal to a namespace's init that
+/// has no handler -- without this one a shutdown would time out and end in
+/// a hard kill, losing everything not yet saved.
 async fn shutdown_signal(state: AppState) {
     let ctrl_c = async {
         tokio::signal::ctrl_c().await.expect("failed to install Ctrl-C handler");
@@ -96,11 +102,22 @@ async fn shutdown_signal(state: AppState) {
             .await;
     };
 
+    #[cfg(target_os = "linux")]
+    let power = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::from_raw(libc::SIGPWR))
+            .expect("failed to install SIGPWR handler")
+            .recv()
+            .await;
+    };
+    #[cfg(not(target_os = "linux"))]
+    let power = std::future::pending::<()>();
+
     let requested = state.shutdown.notified();
 
     tokio::select! {
         _ = ctrl_c => {},
         _ = terminate => {},
+        _ = power => {},
         _ = requested => {},
     }
 }

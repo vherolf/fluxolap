@@ -54,6 +54,22 @@ Then open <http://localhost:7777/ui/> for fluxoscope or <http://localhost:7777/a
 - **Without the examples.** Add `-e FLUXOLAP_EXAMPLES=`.
 - **fluxoterm.** `docker exec -it fluxolap fluxoterm` runs the terminal client inside a container named `fluxolap`.
 
+## Quick start (Proxmox LXC)
+
+Proxmox VE 9.1 and newer can make an LXC container straight from the Docker image (OCI images are a tech preview there).
+
+1. **Pull the image.** In the web UI: a storage that holds CT templates (e.g. `local`) → *CT Templates* → *Pull from OCI Registry*, reference `ghcr.io/vherolf/fluxolap`, tag e.g. `v1.0.0`.
+2. **Create the container** from that template (*Create CT*, or `pct create`), with a network interface on your bridge.
+3. **Start it** and open `http://<container-ip>:7777/ui/`.
+
+- **Keep your data.** Add a mount point at `/data` (e.g. `pct set <id> --mp0 local-lvm:4,mp=/data`) and the environment variable `FLUXOLAP_DATA_DIR=/data` (*Options* → *Environment*). It saves on *Shutdown* (`pct shutdown <id>`), not on *Stop* (`pct stop <id>`), which kills the container.
+- **Upgrade.** Pull the new tag and create a new container with the same mount point. Pin a version tag, as with Docker.
+- **fluxoterm.** `pct exec <id> -- fluxoterm` on the Proxmox host.
+- **Without the examples.** Set the environment variable `FLUXOLAP_EXAMPLES` to an empty value.
+- **Older Proxmox.** Unpack the [release download](#quick-start-release-download) in a Debian container and run `fluxolap` from a systemd unit with `FLUXOLAP_DATA_DIR` set.
+
+fluxolap has no logins: keep the container on a trusted network (see [Security](#security)).
+
 ## Quick start (release download)
 
 A release tarball contains `fluxolap` (the server), `fluxoterm` (the terminal viewer/editor), `ui/` (fluxoscope, the web app), `fluxolap.oxt` (the LibreOffice Calc extension), `examples/` (eight example databases), `start.sh` and this README.
@@ -293,7 +309,7 @@ fluxolap has **no authentication**: anyone who can reach its port can read, chan
 
 ### Persistence
 
-By default the server is fully in-memory. Set `FLUXOLAP_DATA_DIR` to opt into persistence: at startup the server loads the database registry (`registry.bin.zst`) and every registered database file from that directory. A clean stop (Ctrl+C/SIGINT, or SIGTERM from a process manager) saves every loaded database and the registry back before the process exits. A hard kill (`kill -9`) does **not** save.
+By default the server is fully in-memory. Set `FLUXOLAP_DATA_DIR` to opt into persistence: at startup the server loads the database registry (`registry.bin.zst`) and every registered database file from that directory. A clean stop (Ctrl+C/SIGINT, SIGTERM from a process manager, or SIGPWR, which LXC/Proxmox sends on shutdown) saves every loaded database and the registry back before the process exits. A hard kill (`kill -9`) does **not** save.
 
 ```bash
 FLUXOLAP_DATA_DIR=/var/lib/fluxolap cargo run --release -p fluxolap-server

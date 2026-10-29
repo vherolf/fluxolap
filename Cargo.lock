@@ -912,6 +912,7 @@ dependencies = [
  "axum",
  "fluxolap-api",
  "fluxolap-engine",
+ "libc",
  "tokio",
  "tracing",
  "tracing-subscriber",

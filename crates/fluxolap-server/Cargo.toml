@@ -15,3 +15,7 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 fluxolap-engine = { path = "../fluxolap-engine" }
 fluxolap-api = { path = "../fluxolap-api" }
+
+# SIGPWR, the signal LXC stops a container with.
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
