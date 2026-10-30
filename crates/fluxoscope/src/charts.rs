@@ -1,7 +1,7 @@
 //! Charts of the current view as SVG, drawn from Rust: the rows are the
 //! series, the columns the x axis.
 
-use crate::model::chart::{nice_ticks, scale, stack, value_range};
+use crate::model::chart::{group_rows, nice_ticks, scale, stack, value_range};
 use crate::model::format::format_number;
 use crate::model::pivot::{visible_tuples, Tuple, MAX_VIEW_CELLS};
 use crate::state::{Ctx, Loaded, Show};
@@ -12,18 +12,60 @@ const PALETTE: [&str; 12] = ["#3884ff", "#f5a524", "#17c964", "#f31260", "#9353d
 const MAX_SERIES: usize = 12;
 /// Most points along the x axis (the columns).
 const MAX_POINTS: usize = 2_000;
-const W: f64 = 960.0;
-const H: f64 = 420.0;
+/// Most small charts in one view.
+const MAX_PANELS: usize = 36;
+/// Most points across all small charts: each one is an SVG element.
+const MAX_PANEL_MARKS: usize = 30_000;
 const LEFT: f64 = 84.0;
 const RIGHT: f64 = 20.0;
 const TOP: f64 = 16.0;
 const BOTTOM: f64 = 72.0;
 
+/// An SVG's coordinate size. Panels draw on a smaller one, so that their
+/// text stays readable instead of being scaled down with the chart.
+#[derive(Clone, Copy)]
+struct Size {
+    w: f64,
+    h: f64,
+}
+
+const FULL: Size = Size { w: 960.0, h: 420.0 };
+const SMALL: Size = Size { w: 480.0, h: 260.0 };
+
+/// A dimension and one of its consolidated elements: what a click opens.
+type Drill = Option<(usize, u32)>;
+
 struct Series {
     name: String,
+    /// The series' place in the palette and the legend, the same in every panel.
+    slot: usize,
     /// The row's innermost consolidated element (clicking the legend drills into it).
-    drill: Option<(usize, u32)>,
+    drill: Drill,
     values: Vec<Option<f64>>,
+}
+
+/// One chart: the whole view, or one element's rows when split into panels.
+struct Panel {
+    title: String,
+    drill: Drill,
+    series: Vec<Series>,
+}
+
+/// What a chart draws, on a y axis it may share with other charts.
+struct Plot<'a> {
+    series: &'a [Series],
+    x_labels: &'a [String],
+    x_drills: &'a [Drill],
+    size: Size,
+    ticks: &'a [f64],
+    range: (f64, f64),
+    ctx: Ctx,
+}
+
+fn open(ctx: Ctx, drill: Drill) {
+    if let Some((d, e)) = drill {
+        ctx.change(move |p, h| p.toggle(d, e, &h[d]));
+    }
 }
 
 #[component]
@@ -43,58 +85,133 @@ pub fn ChartView(show: Show) -> impl IntoView {
             if cols.len() > MAX_POINTS {
                 return Some(view! { <p class="muted">{format!("Too many columns to chart ({}) -- close some opened elements (at most {MAX_POINTS}).", cols.len())}</p> }.into_any());
             }
-            if show != Show::Line {
+            let split = ex.panels;
+            if show != Show::Line || split {
                 // Bars add up: a total drawn next to (or stacked on) its own
                 // opened children would count them twice, so opened totals go.
+                // Panels share one scale: a total there would flatten its children.
                 let opened = |t: &Tuple, dims: &[usize]| t.iter().zip(dims).any(|(&(e, _), &d)| p.expanded[d].contains(&e) && ex.hier[d].is_consolidated(e));
                 rows.retain(|r| !opened(r, &p.rows));
                 cols.retain(|c| !opened(c, &p.cols));
             }
-            let tuple_name = |t: &Tuple, dims: &[usize]| t.iter().zip(dims).map(|(&(e, _), &d)| ex.hier[d].name(e)).collect::<Vec<_>>().join(" · ");
+            let tuple_name = |t: &[(u32, usize)], dims: &[usize]| t.iter().zip(dims).map(|(&(e, _), &d)| ex.hier[d].name(e)).collect::<Vec<_>>().join(" · ");
+            let drill_of = |t: &[(u32, usize)], dims: &[usize]| -> Drill { t.iter().zip(dims).rev().find(|(&(e, _), &d)| ex.hier[d].is_consolidated(e)).map(|(&(e, _), &d)| (d, e)) };
             let x_labels: Vec<String> = cols.iter().map(|c| if p.cols.is_empty() { "value".into() } else { tuple_name(c, &p.cols) }).collect();
-            let series: Vec<Series> = rows
+            let x_drills: Vec<Drill> = cols.iter().map(|c| drill_of(c, &p.cols)).collect();
+
+            // One row dimension splits into one series per panel; with more,
+            // the outermost is the panels and the inner ones their series.
+            let single = split && p.rows.len() == 1;
+            let skip = usize::from(split && !single);
+            let groups: Vec<(Option<u32>, Vec<Tuple>)> = if split { group_rows(&rows).into_iter().map(|(e, r)| (Some(e), r)).collect() } else { vec![(None, rows.clone())] };
+            let more = if split { groups.len().saturating_sub(MAX_PANELS) } else { rows.len().saturating_sub(MAX_SERIES) };
+            let cut = split && groups.iter().any(|(_, r)| r.len() > MAX_SERIES);
+            let mut slots: Vec<Vec<u32>> = Vec::new();
+            let panels: Vec<Panel> = groups
                 .iter()
-                .take(MAX_SERIES)
-                .map(|r| Series {
-                    name: tuple_name(r, &p.rows),
-                    drill: r.iter().zip(&p.rows).rev().find(|(&(e, _), &d)| ex.hier[d].is_consolidated(e)).map(|(&(e, _), &d)| (d, e)),
-                    values: cols.iter().map(|c| match ex.cells.get(&p.path(r, c)) {
-                        Some(Some(Value::Number(n))) => Some(*n),
-                        _ => None,
-                    }).collect(),
+                .take(if split { MAX_PANELS } else { 1 })
+                .map(|(element, group)| {
+                    let series = group
+                        .iter()
+                        .take(MAX_SERIES)
+                        .map(|r| {
+                            let key: Vec<u32> = if single { Vec::new() } else { r[skip..].iter().map(|&(e, _)| e).collect() };
+                            let slot = slots.iter().position(|s| *s == key).unwrap_or_else(|| {
+                                slots.push(key);
+                                slots.len() - 1
+                            });
+                            Series {
+                                name: tuple_name(&r[skip..], &p.rows[skip..]),
+                                slot,
+                                drill: drill_of(&r[skip..], &p.rows[skip..]),
+                                values: cols.iter().map(|c| match ex.cells.get(&p.path(r, c)) {
+                                    Some(Some(Value::Number(n))) => Some(*n),
+                                    _ => None,
+                                }).collect(),
+                            }
+                        })
+                        .collect();
+                    let (title, drill) = match (*element, p.rows.first()) {
+                        (Some(e), Some(&d)) => (ex.hier[d].name(e).to_string(), ex.hier[d].is_consolidated(e).then_some((d, e))),
+                        _ => (String::new(), None),
+                    };
+                    Panel { title, drill, series }
                 })
                 .collect();
-            if series.is_empty() || x_labels.is_empty() {
+            if panels.iter().all(|panel| panel.series.is_empty()) || x_labels.is_empty() {
                 return Some(view! { <p class="muted">"Nothing to chart in this view."</p> }.into_any());
             }
-            let more = rows.len().saturating_sub(MAX_SERIES);
-            let svg = match show {
-                Show::Line => line_chart(&series, &x_labels),
-                _ => bar_chart(&series, &x_labels, show == Show::Stacked),
+            let marks: usize = panels.iter().map(|panel| panel.series.len() * x_labels.len()).sum();
+            if split && marks > MAX_PANEL_MARKS {
+                return Some(view! { <p class="muted">{format!("Too many points for panels ({marks}) -- close some opened elements, or turn panels off.")}</p> }.into_any());
+            }
+            let extent: Vec<f64> = panels.iter().flat_map(|panel| extent(&panel.series, show == Show::Stacked)).collect();
+            let (ticks, range) = y_axis(extent.iter(), show != Show::Line);
+            let draw = |panel: &Panel, size: Size| {
+                let plot = Plot { series: &panel.series, x_labels: &x_labels, x_drills: &x_drills, size, ticks: &ticks, range, ctx };
+                match show {
+                    Show::Line => line_chart(&plot),
+                    _ => bar_chart(&plot, show == Show::Stacked),
+                }
             };
-            let legend = series
+            let charts = if split {
+                let cells = panels
+                    .iter()
+                    .map(|panel| {
+                        let drill = panel.drill;
+                        view! {
+                            <div class="chart">
+                                <button class="panel-title" class:drillable=drill.is_some() on:click=move |_| open(ctx, drill)>{panel.title.clone()}</button>
+                                {draw(panel, SMALL)}
+                            </div>
+                        }
+                    })
+                    .collect_view();
+                view! { <div class="panels">{cells}</div> }.into_any()
+            } else {
+                view! { <div class="chart">{draw(&panels[0], FULL)}</div> }.into_any()
+            };
+            // Each series once: panels repeat them, in the same colours.
+            let mut seen = Vec::new();
+            let legend = panels
                 .iter()
-                .enumerate()
-                .map(|(i, s)| {
+                .flat_map(|panel| &panel.series)
+                .filter(|s| !single && !seen.contains(&s.slot) && {
+                    seen.push(s.slot);
+                    true
+                })
+                .map(|s| {
                     let drill = s.drill;
                     let name = s.name.clone();
                     view! {
                         <button class="legend-item" class:drillable=drill.is_some() title={if drill.is_some() { "open / close this element" } else { "" }}
-                            on:click=move |_| if let Some((d, e)) = drill { ctx.change(move |p, h| p.toggle(d, e, &h[d])) }>
-                            <span class="swatch" style=format!("background: {}", PALETTE[i % PALETTE.len()])></span>{name}
+                            on:click=move |_| open(ctx, drill)>
+                            <span class="swatch" style=format!("background: {}", PALETTE[s.slot % PALETTE.len()])></span>{name}
                         </button>
                     }
                 })
                 .collect_view();
+            let note = (more > 0).then(|| if split { format!("Showing the first {MAX_PANELS} panels; {more} more are in the table.") } else { format!("Showing the first {MAX_SERIES} rows; {more} more are in the table.") });
             Some(
                 view! {
-                    <div class="chart">{svg}</div>
+                    {charts}
                     <div class="legend">{legend}</div>
-                    {(more > 0).then(|| view! { <p class="muted small">{format!("Showing the first {MAX_SERIES} rows; {more} more are in the table.")}</p> })}
+                    {note.map(|note| view! { <p class="muted small">{note}</p> })}
+                    {cut.then(|| view! { <p class="muted small">{format!("Each panel shows its first {MAX_SERIES} rows.")}</p> })}
                 }
                 .into_any(),
             )
         })
+    }
+}
+
+/// The values a chart's y axis must cover.
+fn extent(series: &[Series], stacked: bool) -> Vec<f64> {
+    let raw: Vec<Vec<Option<f64>>> = series.iter().map(|s| s.values.clone()).collect();
+    if stacked {
+        stack(&raw).into_iter().flatten().flat_map(|(a, b)| [a, b]).collect()
+    } else {
+        raw.into_iter().flatten().flatten().collect()
     }
 }
 
@@ -114,29 +231,32 @@ fn y_axis<'a>(values: impl IntoIterator<Item = &'a f64>, zero: bool) -> (Vec<f64
     (ticks, range)
 }
 
-fn y_px(v: f64, range: (f64, f64)) -> f64 {
-    scale(v, range, (H - BOTTOM, TOP))
+fn y_px(v: f64, plot: &Plot) -> f64 {
+    scale(v, plot.range, (plot.size.h - BOTTOM, TOP))
 }
 
-/// Grid lines, y tick labels and x labels (thinned to about 16).
-fn frame(ticks: &[f64], range: (f64, f64), x_labels: &[String], x_at: impl Fn(usize) -> f64) -> impl IntoView {
-    let grid = ticks
+/// Grid lines, y tick labels and x labels (thinned to about one per 60 units).
+fn frame(plot: &Plot, x_at: impl Fn(usize) -> f64) -> impl IntoView {
+    let Size { w, h } = plot.size;
+    let grid = plot
+        .ticks
         .iter()
         .map(|&t| {
-            let y = y_px(t, range);
+            let y = y_px(t, plot);
             view! {
-                <line x1=LEFT.to_string() x2=(W - RIGHT).to_string() y1=y.to_string() y2=y.to_string() class={if t == 0.0 { "axis" } else { "grid" }}/>
+                <line x1=LEFT.to_string() x2=(w - RIGHT).to_string() y1=y.to_string() y2=y.to_string() class={if t == 0.0 { "axis" } else { "grid" }}/>
                 <text x=(LEFT - 8.0).to_string() y=(y + 4.0).to_string() class="tick" text-anchor="end">{format_number(t)}</text>
             }
         })
         .collect_view();
-    let every = x_labels.len().div_ceil(16).max(1);
-    let labels = x_labels
+    let every = plot.x_labels.len().div_ceil((w / 60.0) as usize).max(1);
+    let labels = plot
+        .x_labels
         .iter()
         .enumerate()
         .filter(|(i, _)| i % every == 0)
         .map(|(i, label)| {
-            let (x, y) = (x_at(i), H - BOTTOM + 14.0);
+            let (x, y) = (x_at(i), h - BOTTOM + 14.0);
             let short: String = if label.chars().count() > 18 { label.chars().take(17).collect::<String>() + "…" } else { label.clone() };
             view! { <text x=x.to_string() y=y.to_string() class="tick" text-anchor="end" transform=format!("rotate(-35 {x} {y})")>{short}</text> }
         })
@@ -144,20 +264,21 @@ fn frame(ticks: &[f64], range: (f64, f64), x_labels: &[String], x_at: impl Fn(us
     view! { {grid}{labels} }
 }
 
-fn line_chart(series: &[Series], x_labels: &[String]) -> AnyView {
-    let (ticks, range) = y_axis(series.iter().flat_map(|s| s.values.iter().flatten()), false);
-    let n = x_labels.len();
-    let x_at = move |i: usize| if n <= 1 { (LEFT + W - RIGHT) / 2.0 } else { LEFT + i as f64 * (W - RIGHT - LEFT) / (n - 1) as f64 };
-    let lines = series
+fn line_chart(plot: &Plot) -> AnyView {
+    let Size { w, h } = plot.size;
+    let n = plot.x_labels.len();
+    let x_at = move |i: usize| if n <= 1 { (LEFT + w - RIGHT) / 2.0 } else { LEFT + i as f64 * (w - RIGHT - LEFT) / (n - 1) as f64 };
+    let ctx = plot.ctx;
+    let lines = plot
+        .series
         .iter()
-        .enumerate()
-        .map(|(si, s)| {
-            let color = PALETTE[si % PALETTE.len()];
+        .map(|s| {
+            let color = PALETTE[s.slot % PALETTE.len()];
             // A gap in the data breaks the line.
             let mut segments: Vec<Vec<(f64, f64)>> = vec![Vec::new()];
             for (i, v) in s.values.iter().enumerate() {
                 match v {
-                    Some(v) => segments.last_mut().expect("never empty").push((x_at(i), y_px(*v, range))),
+                    Some(v) => segments.last_mut().expect("never empty").push((x_at(i), y_px(*v, plot))),
                     None => segments.push(Vec::new()),
                 }
             }
@@ -175,53 +296,56 @@ fn line_chart(series: &[Series], x_labels: &[String]) -> AnyView {
                 .enumerate()
                 .filter_map(|(i, v)| v.map(|v| (i, v)))
                 .map(|(i, v)| {
-                    let tip = format!("{} · {}: {}", s.name, x_labels[i], format_number(v));
-                    view! { <circle cx=x_at(i).to_string() cy=y_px(v, range).to_string() r={if n > 60 { "1.6" } else { "3" }} fill=color><title>{tip}</title></circle> }
+                    let tip = format!("{} · {}: {}", s.name, plot.x_labels[i], format_number(v));
+                    let drill = plot.x_drills[i].or(s.drill);
+                    view! { <circle class:drillable=drill.is_some() on:click=move |_| open(ctx, drill) cx=x_at(i).to_string() cy=y_px(v, plot).to_string() r={if n > 60 { "1.6" } else { "3" }} fill=color><title>{tip}</title></circle> }
                 })
                 .collect_view();
             view! { <g>{paths}{dots}</g> }
         })
         .collect_view();
     view! {
-        <svg viewBox=format!("0 0 {W} {H}") class="chart-svg">
-            {frame(&ticks, range, x_labels, x_at)}
+        <svg viewBox=format!("0 0 {w} {h}") class="chart-svg">
+            {frame(plot, x_at)}
             {lines}
         </svg>
     }
     .into_any()
 }
 
-fn bar_chart(series: &[Series], x_labels: &[String], stacked: bool) -> AnyView {
-    let raw: Vec<Vec<Option<f64>>> = series.iter().map(|s| s.values.clone()).collect();
+fn bar_chart(plot: &Plot, stacked: bool) -> AnyView {
+    let Size { w, h } = plot.size;
+    let raw: Vec<Vec<Option<f64>>> = plot.series.iter().map(|s| s.values.clone()).collect();
     let stacks = stack(&raw);
-    let extent: Vec<f64> = if stacked { stacks.iter().flatten().flat_map(|&(a, b)| [a, b]).collect() } else { raw.iter().flatten().flatten().copied().collect() };
-    let (ticks, range) = y_axis(extent.iter(), true);
-    let n = x_labels.len().max(1);
-    let group_w = (W - RIGHT - LEFT) / n as f64;
+    let n = plot.x_labels.len().max(1);
+    let group_w = (w - RIGHT - LEFT) / n as f64;
     let x_at = move |i: usize| LEFT + (i as f64 + 0.5) * group_w;
-    let bar_w = if stacked { group_w * 0.7 } else { group_w * 0.8 / series.len() as f64 };
-    let bars = series
+    let bar_w = if stacked { group_w * 0.7 } else { group_w * 0.8 / plot.series.len() as f64 };
+    let ctx = plot.ctx;
+    let bars = plot
+        .series
         .iter()
         .enumerate()
         .map(|(si, s)| {
-            let color = PALETTE[si % PALETTE.len()];
-            (0..x_labels.len())
+            let color = PALETTE[s.slot % PALETTE.len()];
+            (0..plot.x_labels.len())
                 .filter_map(|i| {
                     let v = s.values.get(i).copied().flatten()?;
                     let (bottom, top) = if stacked { stacks[si][i] } else { (v.min(0.0), v.max(0.0)) };
                     let x = if stacked { x_at(i) - bar_w / 2.0 } else { LEFT + i as f64 * group_w + group_w * 0.1 + si as f64 * bar_w };
-                    let (y1, y2) = (y_px(top, range), y_px(bottom, range));
-                    let tip = format!("{} · {}: {}", s.name, x_labels[i], format_number(v));
+                    let (y1, y2) = (y_px(top, plot), y_px(bottom, plot));
+                    let tip = format!("{} · {}: {}", s.name, plot.x_labels[i], format_number(v));
+                    let drill = plot.x_drills[i].or(s.drill);
                     Some(view! {
-                        <rect x=format!("{x:.1}") y=format!("{y1:.1}") width=format!("{:.1}", bar_w.max(0.5)) height=format!("{:.1}", (y2 - y1).max(0.0)) fill=color><title>{tip}</title></rect>
+                        <rect class:drillable=drill.is_some() on:click=move |_| open(ctx, drill) x=format!("{x:.1}") y=format!("{y1:.1}") width=format!("{:.1}", bar_w.max(0.5)) height=format!("{:.1}", (y2 - y1).max(0.0)) fill=color><title>{tip}</title></rect>
                     })
                 })
                 .collect_view()
         })
         .collect_view();
     view! {
-        <svg viewBox=format!("0 0 {W} {H}") class="chart-svg">
-            {frame(&ticks, range, x_labels, x_at)}
+        <svg viewBox=format!("0 0 {w} {h}") class="chart-svg">
+            {frame(plot, x_at)}
             {bars}
         </svg>
     }

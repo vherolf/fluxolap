@@ -68,6 +68,8 @@ pub struct Explorer {
     pub error: Option<String>,
     pub show: Show,
     pub heatmap: bool,
+    /// Charts split into one small chart per outermost row element.
+    pub panels: bool,
     /// The dimension panel's search text.
     pub dim_query: String,
     /// A view from the URL, applied once the dimensions are known.
@@ -220,6 +222,7 @@ impl Ctx {
             error: None,
             show: view.as_ref().map_or(Show::Table, |v| v.show),
             heatmap: view.as_ref().is_some_and(|v| v.heatmap),
+            panels: view.as_ref().is_some_and(|v| v.panels),
             dim_query: String::new(),
             pending_view: view,
         }));
@@ -427,7 +430,7 @@ impl Ctx {
         });
     }
 
-    /// Changes something that doesn't need new data (chart type, heatmap).
+    /// Changes something that doesn't need new data (chart type, heatmap, panels).
     pub fn set_display(self, f: impl FnOnce(&mut Explorer)) {
         self.explorer.update(|ex| {
             if let Some(ex) = ex.as_mut() {
@@ -451,6 +454,7 @@ pub struct ViewState {
     pub expanded: Vec<(usize, u32)>,
     pub show: Show,
     pub heatmap: bool,
+    pub panels: bool,
     pub show_empty: bool,
 }
 
@@ -466,6 +470,7 @@ impl ViewState {
             expanded: p.expanded.iter().enumerate().flat_map(|(d, set)| set.iter().map(move |&e| (d, e))).collect(),
             show: ex.show,
             heatmap: ex.heatmap,
+            panels: ex.panels,
             show_empty: !p.hide_empty,
         })
     }
@@ -493,7 +498,7 @@ impl ViewState {
         p.hide_empty = !self.show_empty;
     }
 
-    /// `db=2&cube=5&r=0&c=1&f=3:17,4:2&x=0:12&v=line&heat=1&empty=1`
+    /// `db=2&cube=5&r=0&c=1&f=3:17,4:2&x=0:12&v=line&heat=1&panels=1&empty=1`
     pub fn to_hash(&self) -> String {
         let list = |v: &[usize]| v.iter().map(usize::to_string).collect::<Vec<_>>().join(".");
         let pairs = |v: &[(usize, u32)]| v.iter().map(|(d, e)| format!("{d}:{e}")).collect::<Vec<_>>().join(",");
@@ -509,6 +514,9 @@ impl ViewState {
         }
         if self.heatmap {
             s += "&heat=1";
+        }
+        if self.panels {
+            s += "&panels=1";
         }
         if self.show_empty {
             s += "&empty=1";
@@ -533,6 +541,7 @@ impl ViewState {
                 "x" => v.expanded = pairs(val),
                 "v" => v.show = Show::parse(val),
                 "heat" => v.heatmap = val == "1",
+                "panels" => v.panels = val == "1",
                 "empty" => v.show_empty = val == "1",
                 _ => {}
             }
@@ -559,9 +568,9 @@ mod tests {
 
     #[test]
     fn a_view_survives_the_url() {
-        let v = ViewState { db: 2, cube: 5, rows: vec![0, 2], cols: vec![1], filters: vec![(3, 17)], expanded: vec![(0, 0), (2, 4)], show: Show::Line, heatmap: true, show_empty: false };
+        let v = ViewState { db: 2, cube: 5, rows: vec![0, 2], cols: vec![1], filters: vec![(3, 17)], expanded: vec![(0, 0), (2, 4)], show: Show::Line, heatmap: true, panels: true, show_empty: false };
         let hash = v.to_hash();
-        assert_eq!(hash, "db=2&cube=5&r=0.2&c=1&f=3:17&x=0:0,2:4&v=line&heat=1");
+        assert_eq!(hash, "db=2&cube=5&r=0.2&c=1&f=3:17&x=0:0,2:4&v=line&heat=1&panels=1");
         assert_eq!(ViewState::from_hash(&format!("#{hash}")), Some(v));
         assert_eq!(ViewState::from_hash("#nothing"), None);
     }

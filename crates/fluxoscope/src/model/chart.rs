@@ -1,6 +1,8 @@
 //! Chart geometry: "nice" axis ticks and stacking. The SVG itself is drawn
 //! by the UI; this is the arithmetic, tested on the host.
 
+use super::pivot::Tuple;
+
 /// Tick values covering `[lo, hi]`, about `target` of them, at steps of
 /// 1, 2 or 5 times a power of ten.
 pub fn nice_ticks(lo: f64, hi: f64, target: usize) -> Vec<f64> {
@@ -64,6 +66,20 @@ pub fn scale(v: f64, (lo, hi): (f64, f64), (out_lo, out_hi): (f64, f64)) -> f64 
     out_lo + (v - lo) / (hi - lo) * (out_hi - out_lo)
 }
 
+/// Rows grouped by their outermost element, in order: the panels of a
+/// chart split into small multiples.
+pub fn group_rows(rows: &[Tuple]) -> Vec<(u32, Vec<Tuple>)> {
+    let mut groups: Vec<(u32, Vec<Tuple>)> = Vec::new();
+    for row in rows {
+        let Some(&(element, _)) = row.first() else { continue };
+        match groups.last_mut() {
+            Some((last, group)) if *last == element => group.push(row.clone()),
+            _ => groups.push((element, vec![row.clone()])),
+        }
+    }
+    groups
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -73,6 +89,18 @@ mod tests {
         assert_eq!(nice_ticks(0.0, 8_231_613_565.0, 5), vec![0.0, 2e9, 4e9, 6e9, 8e9, 1e10]);
         assert_eq!(nice_ticks(0.0, 427.3, 5), vec![0.0, 100.0, 200.0, 300.0, 400.0, 500.0]);
         assert_eq!(nice_ticks(-0.3, 1.2, 5), vec![-0.5, 0.0, 0.5, 1.0, 1.5]);
+    }
+
+    #[test]
+    fn rows_group_by_their_outermost_element_in_order() {
+        let nested: Vec<Tuple> = vec![vec![(7, 0), (1, 0)], vec![(7, 0), (2, 0)], vec![(3, 0), (1, 0)]];
+        let groups = group_rows(&nested);
+        assert_eq!(groups.iter().map(|g| (g.0, g.1.len())).collect::<Vec<_>>(), vec![(7, 2), (3, 1)]);
+        assert_eq!(groups[0].1[1], nested[1]);
+
+        let single: Vec<Tuple> = vec![vec![(5, 0)], vec![(4, 1)]];
+        assert_eq!(group_rows(&single).iter().map(|g| (g.0, g.1.len())).collect::<Vec<_>>(), vec![(5, 1), (4, 1)]);
+        assert!(group_rows(&[]).is_empty());
     }
 
     #[test]

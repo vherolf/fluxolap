@@ -228,7 +228,9 @@ fluxoscope is fluxolap's web app for exploring and charting cubes. It is written
 - **Pivot table.** Rows and columns can each hold several nested dimensions; every other dimension is a filter set to one element. Click a consolidated element to open it, and click again to close it. Empty rows and columns are hidden (toggle).
 - **Many dimensions.** A cube with 100+ dimensions stays usable. The dimension panel is searchable and collapses dimensions still at their top element. Element lists load only when needed (just the top-level elements for filters).
 - **Big, sparse views.** With “hide empty” on, a view may read up to 200,000 cells; the server sends only the ones with a value. The table draws just the rows in view, so thousands of rows scroll smoothly (at most 500 columns). Without “hide empty”, a view reads at most 40,000 cells. Views over 40,000 cells aren't re-read in the background, since that would keep the server busy.
-- **Charts** of the same view: line (scaled to the data's range), bar and stacked bar (from 0, opened totals left out so nothing is counted twice). Click a legend entry to open that element.
+- **Heatmap.** Colours the table's cells by value, so outliers stand out.
+- **Charts** of the same view: line (scaled to the data's range), bar and stacked bar (from 0, opened totals left out so nothing is counted twice). Click a legend entry, or a point or bar, to open that element.
+- **Panels** (small multiples). Splits a chart into one small chart per element of the first row dimension, all on one scale and in the same colours, so a third dimension stays in view. With one row dimension each row gets its own chart, past the 12 rows a single chart shows (at most 36 panels of 12 rows each). Opened totals are left out here too.
 - **Links.** The view lives in the URL, so you can bookmark it or send it on.
 - **Another server.** Enter its address in the header. A server on another origin needs `FLUXOLAP_CORS_ORIGINS` set to fluxoscope's origin.
 
@@ -244,7 +246,7 @@ browser                                    fluxolap (one process, port 7777)
 └──────────────────────────────┘      JSON       └──────────────────────────────┘
 ```
 
-1. **Loading.** Opening <http://localhost:7777/> redirects to `/ui/`. fluxolap sends `index.html`, which loads the `.wasm` file (about 440 KB). From then on everything runs in the browser, and fluxoscope has no server of its own.
+1. **Loading.** Opening <http://localhost:7777/> redirects to `/ui/`. fluxolap sends `index.html`, which loads the `.wasm` file (about 530 KB). From then on everything runs in the browser, and fluxoscope has no server of its own.
 2. **Talking to fluxolap.** fluxoscope calls the same REST API as fluxoterm and `curl`, on the page's own origin, so no CORS setup is needed:
    - `GET /api/v1/databases`, then the database's dimensions and cubes;
    - to load a database: `GET /api/v1/examples` lists the server's example files, and `POST /api/v1/examples/{file}/import` imports one. A browser can't read the server's disk, so the server does. An upload from your computer is `POST /api/v1/databases/import`;

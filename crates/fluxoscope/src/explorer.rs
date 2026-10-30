@@ -82,6 +82,7 @@ fn Toolbar() -> impl IntoView {
             };
             let hide_empty = p.hide_empty;
             let heatmap = ex.heatmap;
+            let panels = ex.panels;
             view! {
                 <div class="toolbar">
                     <div class="axes">
@@ -97,6 +98,9 @@ fn Toolbar() -> impl IntoView {
                     <div class="controls">
                         <label><input type="checkbox" prop:checked=hide_empty on:change=move |_| ctx.change(|p, _| p.hide_empty = !p.hide_empty)/>"hide empty"</label>
                         <label><input type="checkbox" prop:checked=heatmap on:change=move |_| ctx.set_display(|ex| ex.heatmap = !ex.heatmap)/>"heatmap"</label>
+                        {(show != Show::Table).then(|| view! {
+                            <label title="one small chart per element of the first row dimension, on one scale"><input type="checkbox" prop:checked=panels on:change=move |_| ctx.set_display(|ex| ex.panels = !ex.panels)/>"panels"</label>
+                        })}
                         <span class="segmented">
                             {seg(Show::Table, "Table")}{seg(Show::Line, "Line")}{seg(Show::Bar, "Bar")}{seg(Show::Stacked, "Stacked")}
                         </span>

@@ -89,6 +89,10 @@ tr.total td.num { font-weight: 600; }
 .chart-svg .grid { stroke: var(--line); }
 .chart-svg .axis { stroke: var(--muted); }
 .chart-svg .tick { fill: var(--muted); font-size: 11px; }
+.chart-svg .drillable { cursor: pointer; }
+.panels { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 10px; }
+.panel-title { display: block; width: 100%; border: 0; background: transparent; padding: 2px 4px 6px; text-align: left; font-weight: 600; cursor: default; }
+.panel-title.drillable { color: var(--total); cursor: pointer; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 2px; }
 .legend-item { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 2px 0; }
 .legend-item.drillable { color: var(--total); }
