@@ -90,6 +90,10 @@ tr.total td.num { font-weight: 600; }
 .chart-svg .axis { stroke: var(--muted); }
 .chart-svg .tick { fill: var(--muted); font-size: 11px; }
 .chart-svg .drillable { cursor: pointer; }
+.chart-svg .tile { stroke: var(--panel); stroke-width: 1; }
+.chart-svg .tile-label { fill: #fff; font-size: 12px; font-weight: 600; pointer-events: none; stroke: rgba(0, 0, 0, .45); stroke-width: 2px; paint-order: stroke; }
+.chart-svg .tile-value { font-weight: 400; font-size: 11px; }
+.treemap-column { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 8px; }
 .panels { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 10px; }
 .panel-title { display: block; width: 100%; border: 0; background: transparent; padding: 2px 4px 6px; text-align: left; font-weight: 600; cursor: default; }
 .panel-title.drillable { color: var(--total); cursor: pointer; }

@@ -66,6 +66,60 @@ pub fn scale(v: f64, (lo, hi): (f64, f64), (out_lo, out_hi): (f64, f64)) -> f64 
     out_lo + (v - lo) / (hi - lo) * (out_hi - out_lo)
 }
 
+/// A rectangle in a chart's coordinates.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Rect {
+    pub x: f64,
+    pub y: f64,
+    pub w: f64,
+    pub h: f64,
+}
+
+/// Lays `weights` out in `area` as a squarified treemap: one rectangle per
+/// weight, in the same order, each with a share of the area matching its
+/// share of the weights. Weights of 0 or below get an empty rectangle.
+pub fn treemap(weights: &[f64], area: Rect) -> Vec<Rect> {
+    let mut out = vec![Rect::default(); weights.len()];
+    let mut order: Vec<usize> = (0..weights.len()).filter(|&i| weights[i] > 0.0).collect();
+    order.sort_by(|&a, &b| weights[b].total_cmp(&weights[a]));
+    let total: f64 = order.iter().map(|&i| weights[i]).sum();
+    if total <= 0.0 {
+        return out;
+    }
+    let unit = area.w * area.h / total;
+    let mut free = area;
+    let mut start = 0;
+    while start < order.len() {
+        // Grow a strip along the shorter side while its tiles get squarer.
+        let side = free.w.min(free.h);
+        if side <= 0.0 {
+            break;
+        }
+        let largest = weights[order[start]] * unit;
+        let (mut end, mut sum, mut best) = (start, 0.0, f64::INFINITY);
+        while end < order.len() {
+            let tile = weights[order[end]] * unit;
+            let grown = sum + tile;
+            let worst = (side * side * largest / (grown * grown)).max(grown * grown / (side * side * tile));
+            if worst > best {
+                break;
+            }
+            (best, sum, end) = (worst, grown, end + 1);
+        }
+        let thickness = sum / side;
+        let along_height = free.w >= free.h;
+        let mut offset = 0.0;
+        for &i in &order[start..end] {
+            let length = weights[i] * unit / thickness;
+            out[i] = if along_height { Rect { x: free.x, y: free.y + offset, w: thickness, h: length } } else { Rect { x: free.x + offset, y: free.y, w: length, h: thickness } };
+            offset += length;
+        }
+        free = if along_height { Rect { x: free.x + thickness, w: free.w - thickness, ..free } } else { Rect { y: free.y + thickness, h: free.h - thickness, ..free } };
+        start = end;
+    }
+    out
+}
+
 /// Rows grouped by their outermost element, in order: the panels of a
 /// chart split into small multiples.
 pub fn group_rows(rows: &[Tuple]) -> Vec<(u32, Vec<Tuple>)> {
@@ -89,6 +143,40 @@ mod tests {
         assert_eq!(nice_ticks(0.0, 8_231_613_565.0, 5), vec![0.0, 2e9, 4e9, 6e9, 8e9, 1e10]);
         assert_eq!(nice_ticks(0.0, 427.3, 5), vec![0.0, 100.0, 200.0, 300.0, 400.0, 500.0]);
         assert_eq!(nice_ticks(-0.3, 1.2, 5), vec![-0.5, 0.0, 0.5, 1.0, 1.5]);
+    }
+
+    #[test]
+    fn treemap_areas_match_the_weights_and_fill_the_space() {
+        let area = Rect { x: 10.0, y: 20.0, w: 600.0, h: 400.0 };
+        let weights = [6.0, 0.0, 6.0, 4.0, 3.0, -5.0, 2.0, 2.0, 1.0];
+        let tiles = treemap(&weights, area);
+        let total: f64 = weights.iter().filter(|w| **w > 0.0).sum();
+        for (w, t) in weights.iter().zip(&tiles) {
+            let expected = w.max(0.0) / total * area.w * area.h;
+            assert!((t.w * t.h - expected).abs() < 1e-6, "{w}: {t:?}");
+            if *w > 0.0 {
+                assert!(t.x >= area.x - 1e-9 && t.y >= area.y - 1e-9 && t.x + t.w <= area.x + area.w + 1e-9 && t.y + t.h <= area.y + area.h + 1e-9, "{t:?}");
+            }
+        }
+        for (i, a) in tiles.iter().enumerate() {
+            for b in &tiles[i + 1..] {
+                let overlap = (a.x + a.w).min(b.x + b.w) - a.x.max(b.x) > 1e-6 && (a.y + a.h).min(b.y + b.h) - a.y.max(b.y) > 1e-6;
+                assert!(!overlap, "{a:?} overlaps {b:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn treemap_tiles_stay_fairly_square() {
+        let tiles = treemap(&[1.0; 16], Rect { x: 0.0, y: 0.0, w: 400.0, h: 400.0 });
+        assert!(tiles.iter().all(|t| t.w.max(t.h) / t.w.min(t.h) < 2.0), "{tiles:?}");
+    }
+
+    #[test]
+    fn treemap_of_nothing_is_empty() {
+        let area = Rect { x: 0.0, y: 0.0, w: 10.0, h: 10.0 };
+        assert_eq!(treemap(&[0.0, -1.0], area), vec![Rect::default(); 2]);
+        assert!(treemap(&[], area).is_empty());
     }
 
     #[test]

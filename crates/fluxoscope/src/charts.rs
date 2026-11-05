@@ -1,10 +1,10 @@
 //! Charts of the current view as SVG, drawn from Rust: the rows are the
 //! series, the columns the x axis.
 
-use crate::model::chart::{group_rows, nice_ticks, scale, stack, value_range};
+use crate::model::chart::{group_rows, nice_ticks, scale, stack, treemap, value_range, Rect};
 use crate::model::format::format_number;
-use crate::model::pivot::{visible_tuples, Tuple, MAX_VIEW_CELLS};
-use crate::state::{Ctx, Loaded, Show};
+use crate::model::pivot::{visible_tuples, Pivot, Tuple, MAX_VIEW_CELLS};
+use crate::state::{Ctx, Explorer, Loaded, Show};
 use fluxolap_api_types::Value;
 use leptos::prelude::*;
 
@@ -16,6 +16,8 @@ const MAX_POINTS: usize = 2_000;
 const MAX_PANELS: usize = 36;
 /// Most points across all small charts: each one is an SVG element.
 const MAX_PANEL_MARKS: usize = 30_000;
+/// Most tiles in one treemap: the largest ones; the rest would be too small to see.
+const MAX_TILES: usize = 500;
 const LEFT: f64 = 84.0;
 const RIGHT: f64 = 20.0;
 const TOP: f64 = 16.0;
@@ -31,6 +33,7 @@ struct Size {
 
 const FULL: Size = Size { w: 960.0, h: 420.0 };
 const SMALL: Size = Size { w: 480.0, h: 260.0 };
+const TREEMAP: Size = Size { w: 960.0, h: 520.0 };
 
 /// A dimension and one of its consolidated elements: what a click opens.
 type Drill = Option<(usize, u32)>;
@@ -93,6 +96,9 @@ pub fn ChartView(show: Show) -> impl IntoView {
                 let opened = |t: &Tuple, dims: &[usize]| t.iter().zip(dims).any(|(&(e, _), &d)| p.expanded[d].contains(&e) && ex.hier[d].is_consolidated(e));
                 rows.retain(|r| !opened(r, &p.rows));
                 cols.retain(|c| !opened(c, &p.cols));
+            }
+            if show == Show::Treemap {
+                return Some(treemap_view(ctx, ex, p, &rows, &cols));
             }
             let tuple_name = |t: &[(u32, usize)], dims: &[usize]| t.iter().zip(dims).map(|(&(e, _), &d)| ex.hier[d].name(e)).collect::<Vec<_>>().join(" · ");
             let drill_of = |t: &[(u32, usize)], dims: &[usize]| -> Drill { t.iter().zip(dims).rev().find(|(&(e, _), &d)| ex.hier[d].is_consolidated(e)).map(|(&(e, _), &d)| (d, e)) };
@@ -203,6 +209,181 @@ pub fn ChartView(show: Show) -> impl IntoView {
             )
         })
     }
+}
+
+/// One rectangle of a treemap.
+struct Tile {
+    name: String,
+    value: f64,
+    /// Its group's place in the palette, the same in every panel.
+    slot: usize,
+    drill: Drill,
+}
+
+/// The current view as treemaps of one column: each row a tile, grouped by
+/// its parent (or, with nested rows, by the inner dimension's element). With
+/// panels on and nested rows, one treemap per outermost row element.
+fn treemap_view(ctx: Ctx, ex: &Explorer, p: &Pivot, rows: &[Tuple], cols: &[Tuple]) -> AnyView {
+    let elements = |t: &Tuple| t.iter().map(|&(e, _)| e).collect::<Vec<u32>>();
+    let Some(col) = cols.iter().find(|c| elements(c) == ex.treemap_col).or(cols.first()) else {
+        return view! { <p class="muted">"Nothing to chart in this view."</p> }.into_any();
+    };
+    let tuple_name = |t: &[(u32, usize)], dims: &[usize]| t.iter().zip(dims).map(|(&(e, _), &d)| ex.hier[d].name(e)).collect::<Vec<_>>().join(" · ");
+    let split = ex.panels && p.rows.len() > 1;
+    let skip = usize::from(split);
+    let groups: Vec<(Option<u32>, Vec<Tuple>)> = if split { group_rows(rows).into_iter().map(|(e, r)| (Some(e), r)).collect() } else { vec![(None, rows.to_vec())] };
+    let more = groups.len().saturating_sub(if split { MAX_PANELS } else { 1 });
+    let (mut left_out, mut too_small) = (0, 0);
+    // A group's key, name and what clicking it in the legend closes.
+    let mut slots: Vec<(u32, String, Drill)> = Vec::new();
+    let panels: Vec<(String, Drill, Vec<Tile>)> = groups
+        .iter()
+        .take(if split { MAX_PANELS } else { 1 })
+        .map(|(element, group)| {
+            // An element under two parents is on two rows, one value.
+            let mut seen = std::collections::HashSet::new();
+            let mut tiles: Vec<Tile> = Vec::new();
+            for r in group {
+                if !seen.insert(elements(r)) {
+                    continue;
+                }
+                let Some(Some(Value::Number(value))) = ex.cells.get(&p.path(r, col)) else { continue };
+                if *value <= 0.0 {
+                    left_out += 1;
+                    continue;
+                }
+                let (&(e, _), dim) = (&r[skip], p.rows[skip]);
+                let key = if r.len() - skip == 1 { ex.hier[dim].get(e).and_then(|el| el.parents.first().copied()).unwrap_or(e) } else { e };
+                let slot = slots.iter().position(|s| s.0 == key).unwrap_or_else(|| {
+                    slots.push((key, ex.hier[dim].name(key).to_string(), ex.hier[dim].is_consolidated(key).then_some((dim, key))));
+                    slots.len() - 1
+                });
+                let drill = r.iter().zip(&p.rows).rev().find(|(&(e, _), &d)| ex.hier[d].is_consolidated(e)).map(|(&(e, _), &d)| (d, e));
+                tiles.push(Tile { name: tuple_name(&r[skip..], &p.rows[skip..]), value: *value, slot, drill });
+            }
+            tiles.sort_by(|a, b| b.value.total_cmp(&a.value));
+            too_small += tiles.len().saturating_sub(MAX_TILES);
+            tiles.truncate(MAX_TILES);
+            let total: f64 = tiles.iter().map(|t| t.value).sum();
+            let (title, drill) = match (*element, p.rows.first()) {
+                (Some(e), Some(&d)) => (format!("{}: {}", ex.hier[d].name(e), format_number(total)), ex.hier[d].is_consolidated(e).then_some((d, e))),
+                _ => (String::new(), None),
+            };
+            (title, drill, tiles)
+        })
+        .collect();
+    let charts = if panels.iter().all(|(_, _, tiles)| tiles.is_empty()) {
+        view! { <p class="muted">"Nothing to chart in this view: a treemap needs values above 0."</p> }.into_any()
+    } else if split {
+        let cells = panels
+            .iter()
+            .map(|(title, drill, tiles)| {
+                let drill = *drill;
+                view! {
+                    <div class="chart">
+                        <button class="panel-title" class:drillable=drill.is_some() on:click=move |_| open(ctx, drill)>{title.clone()}</button>
+                        {treemap_svg(ctx, tiles, SMALL)}
+                    </div>
+                }
+            })
+            .collect_view();
+        view! { <div class="panels">{cells}</div> }.into_any()
+    } else {
+        view! { <div class="chart">{treemap_svg(ctx, &panels[0].2, TREEMAP)}</div> }.into_any()
+    };
+    let picker = (cols.len() > 1).then(|| {
+        let current = elements(col);
+        let options = cols
+            .iter()
+            .enumerate()
+            .map(|(i, c)| view! { <option value=i.to_string() selected=elements(c) == current>{tuple_name(c, &p.cols)}</option> })
+            .collect_view();
+        let keys: Vec<Vec<u32>> = cols.iter().map(elements).collect();
+        view! {
+            <label class="treemap-column">"Column"
+                <select on:change=move |ev| {
+                    if let Some(key) = event_target_value(&ev).parse::<usize>().ok().and_then(|i| keys.get(i).cloned()) {
+                        ctx.set_display(move |ex| ex.treemap_col = key);
+                    }
+                }>{options}</select>
+            </label>
+        }
+    });
+    // Groups of one are named by their own tile; a flat dimension needs no legend.
+    let legend = (slots.len() <= MAX_SERIES && panels.iter().any(|(_, _, tiles)| tiles.iter().enumerate().any(|(i, t)| tiles[..i].iter().any(|o| o.slot == t.slot))))
+        .then(|| {
+            slots
+                .iter()
+                .enumerate()
+                .map(|(i, (_, name, drill))| {
+                    let drill = *drill;
+                    view! {
+                        <button class="legend-item" class:drillable=drill.is_some() title={if drill.is_some() { "open / close this element" } else { "" }}
+                            on:click=move |_| open(ctx, drill)>
+                            <span class="swatch" style=format!("background: {}", PALETTE[i % PALETTE.len()])></span>{name.clone()}
+                        </button>
+                    }
+                })
+                .collect_view()
+        });
+    let mut notes = Vec::new();
+    if more > 0 {
+        notes.push(format!("Showing the first {MAX_PANELS} panels; {more} more are in the table."));
+    }
+    if left_out > 0 {
+        notes.push(format!("{left_out} rows at 0 or below are left out: a tile can't have a negative size."));
+    }
+    if too_small > 0 {
+        notes.push(format!("Showing the largest {MAX_TILES} tiles; the {too_small} smallest are in the table."));
+    }
+    view! {
+        {picker}
+        {charts}
+        <div class="legend">{legend}</div>
+        {notes.into_iter().map(|note| view! { <p class="muted small">{note}</p> }).collect_view()}
+    }
+    .into_any()
+}
+
+/// Tiles laid out by group, then within each group, so that a group stays
+/// together. `tiles` is sorted by value.
+fn treemap_svg(ctx: Ctx, tiles: &[Tile], size: Size) -> AnyView {
+    let Size { w, h } = size;
+    let mut groups: Vec<(usize, f64)> = Vec::new();
+    for t in tiles {
+        match groups.iter_mut().find(|g| g.0 == t.slot) {
+            Some(g) => g.1 += t.value,
+            None => groups.push((t.slot, t.value)),
+        }
+    }
+    let total: f64 = groups.iter().map(|g| g.1).sum();
+    let weights: Vec<f64> = groups.iter().map(|g| g.1).collect();
+    let cells = treemap(&weights, Rect { x: 0.0, y: 0.0, w, h })
+        .into_iter()
+        .zip(&groups)
+        .map(|(cell, &(slot, _))| {
+            let members: Vec<&Tile> = tiles.iter().filter(|t| t.slot == slot).collect();
+            let weights: Vec<f64> = members.iter().map(|t| t.value).collect();
+            let color = PALETTE[slot % PALETTE.len()];
+            treemap(&weights, cell)
+                .into_iter()
+                .zip(members)
+                .map(|(r, t)| {
+                    let tip = format!("{}: {} ({:.1}%)", t.name, format_number(t.value), t.value / total * 100.0);
+                    let drill = t.drill;
+                    let room = (r.w / 7.5) as usize;
+                    let short: String = if t.name.chars().count() > room { t.name.chars().take(room.saturating_sub(1)).collect::<String>() + "…" } else { t.name.clone() };
+                    let (x, y) = (r.x + 6.0, r.y + 16.0);
+                    view! {
+                        <rect class="tile" class:drillable=drill.is_some() on:click=move |_| open(ctx, drill) x=format!("{:.1}", r.x) y=format!("{:.1}", r.y) width=format!("{:.1}", r.w) height=format!("{:.1}", r.h) fill=color><title>{tip}</title></rect>
+                        {(r.w >= 44.0 && r.h >= 20.0).then(|| view! { <text class="tile-label" x=format!("{x:.1}") y=format!("{y:.1}")>{short}</text> })}
+                        {(r.w >= 70.0 && r.h >= 36.0).then(|| view! { <text class="tile-label tile-value" x=format!("{x:.1}") y=format!("{:.1}", y + 15.0)>{format_number(t.value)}</text> })}
+                    }
+                })
+                .collect_view()
+        })
+        .collect_view();
+    view! { <svg viewBox=format!("0 0 {w} {h}") class="chart-svg">{cells}</svg> }.into_any()
 }
 
 /// The values a chart's y axis must cover.

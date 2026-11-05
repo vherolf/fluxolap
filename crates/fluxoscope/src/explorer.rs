@@ -102,7 +102,7 @@ fn Toolbar() -> impl IntoView {
                             <label title="one small chart per element of the first row dimension, on one scale"><input type="checkbox" prop:checked=panels on:change=move |_| ctx.set_display(|ex| ex.panels = !ex.panels)/>"panels"</label>
                         })}
                         <span class="segmented">
-                            {seg(Show::Table, "Table")}{seg(Show::Line, "Line")}{seg(Show::Bar, "Bar")}{seg(Show::Stacked, "Stacked")}
+                            {seg(Show::Table, "Table")}{seg(Show::Line, "Line")}{seg(Show::Bar, "Bar")}{seg(Show::Stacked, "Stacked")}{seg(Show::Treemap, "Treemap")}
                         </span>
                     </div>
                 </div>

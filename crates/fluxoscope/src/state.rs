@@ -18,6 +18,7 @@ pub enum Show {
     Line,
     Bar,
     Stacked,
+    Treemap,
 }
 
 impl Show {
@@ -27,6 +28,7 @@ impl Show {
             Show::Line => "line",
             Show::Bar => "bar",
             Show::Stacked => "stacked",
+            Show::Treemap => "treemap",
         }
     }
 
@@ -35,6 +37,7 @@ impl Show {
             "line" => Show::Line,
             "bar" => Show::Bar,
             "stacked" => Show::Stacked,
+            "treemap" => Show::Treemap,
             _ => Show::Table,
         }
     }
@@ -70,6 +73,8 @@ pub struct Explorer {
     pub heatmap: bool,
     /// Charts split into one small chart per outermost row element.
     pub panels: bool,
+    /// The treemap's column, as its elements; empty means the first one.
+    pub treemap_col: Vec<u32>,
     /// The dimension panel's search text.
     pub dim_query: String,
     /// A view from the URL, applied once the dimensions are known.
@@ -223,6 +228,7 @@ impl Ctx {
             show: view.as_ref().map_or(Show::Table, |v| v.show),
             heatmap: view.as_ref().is_some_and(|v| v.heatmap),
             panels: view.as_ref().is_some_and(|v| v.panels),
+            treemap_col: view.as_ref().map_or(Vec::new(), |v| v.treemap_col.clone()),
             dim_query: String::new(),
             pending_view: view,
         }));
@@ -455,6 +461,7 @@ pub struct ViewState {
     pub show: Show,
     pub heatmap: bool,
     pub panels: bool,
+    pub treemap_col: Vec<u32>,
     pub show_empty: bool,
 }
 
@@ -471,6 +478,7 @@ impl ViewState {
             show: ex.show,
             heatmap: ex.heatmap,
             panels: ex.panels,
+            treemap_col: ex.treemap_col.clone(),
             show_empty: !p.hide_empty,
         })
     }
@@ -498,7 +506,7 @@ impl ViewState {
         p.hide_empty = !self.show_empty;
     }
 
-    /// `db=2&cube=5&r=0&c=1&f=3:17,4:2&x=0:12&v=line&heat=1&panels=1&empty=1`
+    /// `db=2&cube=5&r=0&c=1&f=3:17,4:2&x=0:12&v=line&heat=1&panels=1&tc=3.7&empty=1`
     pub fn to_hash(&self) -> String {
         let list = |v: &[usize]| v.iter().map(usize::to_string).collect::<Vec<_>>().join(".");
         let pairs = |v: &[(usize, u32)]| v.iter().map(|(d, e)| format!("{d}:{e}")).collect::<Vec<_>>().join(",");
@@ -517,6 +525,9 @@ impl ViewState {
         }
         if self.panels {
             s += "&panels=1";
+        }
+        if !self.treemap_col.is_empty() {
+            s += &format!("&tc={}", self.treemap_col.iter().map(u32::to_string).collect::<Vec<_>>().join("."));
         }
         if self.show_empty {
             s += "&empty=1";
@@ -542,6 +553,7 @@ impl ViewState {
                 "v" => v.show = Show::parse(val),
                 "heat" => v.heatmap = val == "1",
                 "panels" => v.panels = val == "1",
+                "tc" => v.treemap_col = val.split('.').filter_map(|x| x.parse().ok()).collect(),
                 "empty" => v.show_empty = val == "1",
                 _ => {}
             }
@@ -568,9 +580,9 @@ mod tests {
 
     #[test]
     fn a_view_survives_the_url() {
-        let v = ViewState { db: 2, cube: 5, rows: vec![0, 2], cols: vec![1], filters: vec![(3, 17)], expanded: vec![(0, 0), (2, 4)], show: Show::Line, heatmap: true, panels: true, show_empty: false };
+        let v = ViewState { db: 2, cube: 5, rows: vec![0, 2], cols: vec![1], filters: vec![(3, 17)], expanded: vec![(0, 0), (2, 4)], show: Show::Line, heatmap: true, panels: true, treemap_col: vec![3, 7], show_empty: false };
         let hash = v.to_hash();
-        assert_eq!(hash, "db=2&cube=5&r=0.2&c=1&f=3:17&x=0:0,2:4&v=line&heat=1&panels=1");
+        assert_eq!(hash, "db=2&cube=5&r=0.2&c=1&f=3:17&x=0:0,2:4&v=line&heat=1&panels=1&tc=3.7");
         assert_eq!(ViewState::from_hash(&format!("#{hash}")), Some(v));
         assert_eq!(ViewState::from_hash("#nothing"), None);
     }
